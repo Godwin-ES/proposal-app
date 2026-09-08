@@ -15,16 +15,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type FieldConfig = { name: keyof ProposalIntake; label: string; multiline?: boolean; required?: boolean };
 
+const CLIENT_INFO_FIELDS: FieldConfig[] = [
+  { name: "clientName", label: "Client Name", required: true },
+  { name: "companyName", label: "Company Name", required: true },
+  { name: "dateOfCall", label: "Date of Call" },
+  { name: "salespersonName", label: "Salesperson Name", required: true },
+];
+
 const SECTIONS: { title: string; fields: FieldConfig[] }[] = [
-  {
-    title: "Client Information",
-    fields: [
-      { name: "clientName", label: "Client Name", required: true },
-      { name: "companyName", label: "Company Name", required: true },
-      { name: "dateOfCall", label: "Date of Call" },
-      { name: "salespersonName", label: "Salesperson Name", required: true },
-    ],
-  },
   {
     title: "Discovery & Business Needs",
     fields: [
@@ -92,56 +90,60 @@ export function IntakeForm({
     });
   }
 
+  function renderField(field: FieldConfig) {
+    return (
+      <div key={field.name} className={field.multiline ? "sm:col-span-2 flex flex-col gap-2" : "flex flex-col gap-2"}>
+        <Label htmlFor={field.name}>
+          {field.label}
+          {field.required ? <span className="text-destructive"> *</span> : null}
+        </Label>
+        {field.multiline ? (
+          <Textarea id={field.name} disabled={!editable} rows={4} {...register(field.name)} />
+        ) : (
+          <Input id={field.name} disabled={!editable} {...register(field.name)} />
+        )}
+        {errors[field.name] ? <p className="text-sm text-destructive">{errors[field.name]?.message as string}</p> : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Client Email</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
-          <div className="flex-1">
-            <Label htmlFor="clientEmail">Client Email (delivery address)</Label>
-            <Input
-              id="clientEmail"
-              type="email"
-              value={clientEmail}
-              onChange={(e) => setClientEmail(e.target.value)}
-              placeholder="client@company.com"
-            />
-          </div>
-          <Button type="button" onClick={onSaveEmail} disabled={emailPending} variant="secondary">
-            {emailPending ? "Saving..." : "Save Email"}
-          </Button>
-        </CardContent>
-      </Card>
-
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Client Information</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">{CLIENT_INFO_FIELDS.map(renderField)}</div>
+
+            <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end sm:gap-3">
+              <div className="flex flex-1 flex-col gap-2">
+                <Label htmlFor="clientEmail">Client Email (delivery address)</Label>
+                <Input
+                  id="clientEmail"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="client@company.com"
+                />
+              </div>
+              <Button type="button" onClick={onSaveEmail} disabled={emailPending} variant="secondary">
+                {emailPending ? "Saving..." : "Save Email"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Saved separately — correcting it never creates a new proposal version.
+            </p>
+          </CardContent>
+        </Card>
+
         {SECTIONS.map((section) => (
           <Card key={section.title}>
             <CardHeader>
               <CardTitle className="text-base">{section.title}</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              {section.fields.map((field) => (
-                <div
-                  key={field.name}
-                  className={field.multiline ? "sm:col-span-2 flex flex-col gap-2" : "flex flex-col gap-2"}
-                >
-                  <Label htmlFor={field.name}>
-                    {field.label}
-                    {field.required ? <span className="text-destructive"> *</span> : null}
-                  </Label>
-                  {field.multiline ? (
-                    <Textarea id={field.name} disabled={!editable} rows={4} {...register(field.name)} />
-                  ) : (
-                    <Input id={field.name} disabled={!editable} {...register(field.name)} />
-                  )}
-                  {errors[field.name] ? (
-                    <p className="text-sm text-destructive">{errors[field.name]?.message as string}</p>
-                  ) : null}
-                </div>
-              ))}
-            </CardContent>
+            <CardContent className="grid gap-4 sm:grid-cols-2">{section.fields.map(renderField)}</CardContent>
           </Card>
         ))}
         {editable ? (
