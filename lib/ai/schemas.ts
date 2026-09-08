@@ -50,3 +50,13 @@ export const sectionRegenerationSchema = z.discriminatedUnion("section", [
 ]);
 
 export type SectionRegenerationResult = z.infer<typeof sectionRegenerationSchema>;
+
+/** One schema per section, keyed so a provider call can only ever target the
+ * exact section the application requested — the model cannot choose a
+ * different `section` value because the schema fixes it as a literal. */
+export const REGENERATION_SCHEMA_BY_SECTION = {
+  introduction: introductionRegenerationSchema,
+  projectScope: projectScopeRegenerationSchema,
+  recommendedApproach: recommendedApproachRegenerationSchema,
+  deliverables: deliverablesRegenerationSchema,
+} as const;
