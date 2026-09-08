@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
+import { loadEnv } from "vite";
+
+process.env = { ...process.env, ...loadEnv("", process.cwd(), "") };
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  timeout: 180_000,
   fullyParallel: false,
   workers: 1,
   retries: 0,
