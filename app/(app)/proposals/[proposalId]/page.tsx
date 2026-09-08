@@ -11,6 +11,7 @@ import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { IntakeForm } from "@/components/proposals/intake-form";
 import { SupportingMaterialPanel } from "@/components/proposals/supporting-material-panel";
+import { GenerateDraftPanel } from "@/components/proposals/generate-draft-panel";
 import { DomainError } from "@/lib/domain/errors";
 
 export default async function ProposalPage({
@@ -34,9 +35,18 @@ export default async function ProposalPage({
 
   const intake = rowToIntake(proposal);
   const hasVersion = proposal.current_version_id !== null;
-  const generationBlockers = evaluateGenerationReadiness(intake);
   const materials = await listMaterials(supabase, proposal.id, user);
   const materialsEditable = isEditableStatus(proposal.status);
+
+  const generationBlockers = evaluateGenerationReadiness(intake);
+  const failedMaterials = materials.filter((m) => m.extraction_status === "failed");
+  const pendingMaterials = materials.filter((m) => m.extraction_status === "pending");
+  if (failedMaterials.length > 0) {
+    generationBlockers.push(`Remove or retry failed file(s): ${failedMaterials.map((m) => m.filename).join(", ")}`);
+  }
+  if (pendingMaterials.length > 0) {
+    generationBlockers.push("Supporting material is still processing");
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,6 +71,7 @@ export default async function ProposalPage({
               warning: m.warning,
             }))}
           />
+          <GenerateDraftPanel proposalId={proposal.id} ready={generationBlockers.length === 0} />
         </>
       ) : (
         <p className="text-sm text-muted-foreground">
