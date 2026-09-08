@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveManualRevisionAction } from "@/actions/proposals";
@@ -100,6 +101,14 @@ export function ProposalWorkspace({
       />
 
       <ReadinessPanel title="Approval readiness" blockers={editable ? approvalBlockers : []} />
+
+      {status === "approved" || status === "delivered" ? (
+        <div>
+          <Button asChild variant="secondary">
+            <Link href={`/delivery/${proposalId}`}>Go to Delivery</Link>
+          </Button>
+        </div>
+      ) : null}
 
       {canSubmitForApproval ? (
         <div>
