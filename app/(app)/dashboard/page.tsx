@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireSalesperson } from "@/lib/auth/guards";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listMyProposals } from "@/lib/proposals/service";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusSummary } from "@/components/dashboard/status-summary";
@@ -9,7 +10,8 @@ import { Plus } from "lucide-react";
 
 export default async function DashboardPage() {
   const user = await requireSalesperson();
-  const proposals = await listMyProposals(user);
+  const supabase = await createSupabaseServerClient();
+  const proposals = await listMyProposals(supabase, user);
 
   return (
     <div className="flex flex-col gap-6">

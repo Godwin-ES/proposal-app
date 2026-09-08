@@ -3,13 +3,15 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireSalesperson } from "@/lib/auth/guards";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import * as proposalService from "@/lib/proposals/service";
 import { DomainError } from "@/lib/domain/errors";
 import type { ActionResult, ProposalIntake } from "@/lib/domain/types";
 
 export async function createProposalAction(): Promise<void> {
   const user = await requireSalesperson();
-  const proposal = await proposalService.createProposal(user);
+  const supabase = await createSupabaseServerClient();
+  const proposal = await proposalService.createProposal(supabase, user);
   revalidatePath("/dashboard");
   redirect(`/proposals/${proposal.id}`);
 }
@@ -20,7 +22,8 @@ export async function updateIntakeAction(
 ): Promise<ActionResult<null>> {
   try {
     await requireSalesperson();
-    await proposalService.updateIntake(proposalId, input);
+    const supabase = await createSupabaseServerClient();
+    await proposalService.updateIntake(supabase, proposalId, input);
     revalidatePath(`/proposals/${proposalId}`);
     revalidatePath("/dashboard");
     return { ok: true, data: null };
@@ -35,7 +38,8 @@ export async function updateClientEmailAction(
 ): Promise<ActionResult<null>> {
   try {
     await requireSalesperson();
-    await proposalService.updateClientEmail(proposalId, email);
+    const supabase = await createSupabaseServerClient();
+    await proposalService.updateClientEmail(supabase, proposalId, email);
     revalidatePath(`/proposals/${proposalId}`);
     return { ok: true, data: null };
   } catch (error) {
