@@ -8,6 +8,7 @@ import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { ProposalSectionCard } from "@/components/proposals/proposal-section-card";
 import { ProposalEditorDialog } from "@/components/proposals/proposal-editor-dialog";
 import { ProposalDetailsEditor } from "@/components/proposals/proposal-details-editor";
+import { RegenerateSectionDialog } from "@/components/proposals/regenerate-section-dialog";
 import { VersionHistory, type VersionHistoryEntry } from "@/components/proposals/version-history";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
@@ -24,6 +25,7 @@ export function ProposalWorkspace({
   approvalBlockers,
   editable,
   versions,
+  materialCount,
 }: {
   proposalId: string;
   status: ProposalStatus;
@@ -35,6 +37,7 @@ export function ProposalWorkspace({
   approvalBlockers: string[];
   editable: boolean;
   versions: VersionHistoryEntry[];
+  materialCount: number;
 }) {
   const router = useRouter();
 
@@ -85,12 +88,21 @@ export function ProposalWorkspace({
         content={snapshot.content.introduction}
         actions={
           editable ? (
-            <ProposalEditorDialog
-              trigger={editButton("Introduction")}
-              title="Edit Introduction"
-              initialValue={snapshot.content.introduction}
-              onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, introduction: value } })}
-            />
+            <div className="flex items-center gap-1">
+              <ProposalEditorDialog
+                trigger={editButton("Introduction")}
+                title="Edit Introduction"
+                initialValue={snapshot.content.introduction}
+                onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, introduction: value } })}
+              />
+              <RegenerateSectionDialog
+                proposalId={proposalId}
+                versionId={versionId}
+                targetSection="introduction"
+                sectionLabel="Introduction"
+                materialCount={materialCount}
+              />
+            </div>
           ) : null
         }
       />
@@ -100,12 +112,21 @@ export function ProposalWorkspace({
         content={snapshot.content.projectScope}
         actions={
           editable ? (
-            <ProposalEditorDialog
-              trigger={editButton("Project Scope")}
-              title="Edit Project Scope"
-              initialValue={snapshot.content.projectScope}
-              onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, projectScope: value } })}
-            />
+            <div className="flex items-center gap-1">
+              <ProposalEditorDialog
+                trigger={editButton("Project Scope")}
+                title="Edit Project Scope"
+                initialValue={snapshot.content.projectScope}
+                onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, projectScope: value } })}
+              />
+              <RegenerateSectionDialog
+                proposalId={proposalId}
+                versionId={versionId}
+                targetSection="projectScope"
+                sectionLabel="Project Scope"
+                materialCount={materialCount}
+              />
+            </div>
           ) : null
         }
       />
@@ -115,14 +136,23 @@ export function ProposalWorkspace({
         content={snapshot.content.recommendedApproach}
         actions={
           editable ? (
-            <ProposalEditorDialog
-              trigger={editButton("Recommended Approach")}
-              title="Edit Recommended Approach"
-              initialValue={snapshot.content.recommendedApproach}
-              onSave={(value) =>
-                saveSnapshot({ ...snapshot, content: { ...snapshot.content, recommendedApproach: value } })
-              }
-            />
+            <div className="flex items-center gap-1">
+              <ProposalEditorDialog
+                trigger={editButton("Recommended Approach")}
+                title="Edit Recommended Approach"
+                initialValue={snapshot.content.recommendedApproach}
+                onSave={(value) =>
+                  saveSnapshot({ ...snapshot, content: { ...snapshot.content, recommendedApproach: value } })
+                }
+              />
+              <RegenerateSectionDialog
+                proposalId={proposalId}
+                versionId={versionId}
+                targetSection="recommendedApproach"
+                sectionLabel="Recommended Approach"
+                materialCount={materialCount}
+              />
+            </div>
           ) : null
         }
       />
@@ -138,24 +168,33 @@ export function ProposalWorkspace({
         }
         actions={
           editable ? (
-            <ProposalEditorDialog
-              trigger={editButton("Deliverables")}
-              title="Edit Deliverables"
-              description="One deliverable per line."
-              initialValue={snapshot.content.deliverables.join("\n")}
-              onSave={(value) =>
-                saveSnapshot({
-                  ...snapshot,
-                  content: {
-                    ...snapshot.content,
-                    deliverables: value
-                      .split("\n")
-                      .map((line) => line.trim())
-                      .filter(Boolean),
-                  },
-                })
-              }
-            />
+            <div className="flex items-center gap-1">
+              <ProposalEditorDialog
+                trigger={editButton("Deliverables")}
+                title="Edit Deliverables"
+                description="One deliverable per line."
+                initialValue={snapshot.content.deliverables.join("\n")}
+                onSave={(value) =>
+                  saveSnapshot({
+                    ...snapshot,
+                    content: {
+                      ...snapshot.content,
+                      deliverables: value
+                        .split("\n")
+                        .map((line) => line.trim())
+                        .filter(Boolean),
+                    },
+                  })
+                }
+              />
+              <RegenerateSectionDialog
+                proposalId={proposalId}
+                versionId={versionId}
+                targetSection="deliverables"
+                sectionLabel="Deliverables"
+                materialCount={materialCount}
+              />
+            </div>
           ) : null
         }
       />

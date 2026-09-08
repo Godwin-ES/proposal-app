@@ -103,6 +103,7 @@ export default async function ProposalPage({
       snapshot={currentVersion.snapshot}
       approvalBlockers={approvalBlockers}
       editable={isVersionWritableStatus(proposal.status)}
+      materialCount={materials.filter((m) => m.extraction_status === "ready").length}
       versions={versions.map((v) => ({
         id: v.id,
         versionNumber: v.version_number,
