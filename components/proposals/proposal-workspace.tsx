@@ -1,8 +1,10 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveManualRevisionAction } from "@/actions/proposals";
+import { submitForApprovalAction } from "@/actions/approvals";
 import { ProposalHeader } from "@/components/proposals/proposal-header";
 import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { ProposalSectionCard } from "@/components/proposals/proposal-section-card";
@@ -11,7 +13,18 @@ import { ProposalDetailsEditor } from "@/components/proposals/proposal-details-e
 import { RegenerateSectionDialog } from "@/components/proposals/regenerate-section-dialog";
 import { VersionHistory, type VersionHistoryEntry } from "@/components/proposals/version-history";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Pencil, Send } from "lucide-react";
 import type { ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
 
 export function ProposalWorkspace({
@@ -26,6 +39,7 @@ export function ProposalWorkspace({
   editable,
   versions,
   materialCount,
+  canSubmitForApproval,
 }: {
   proposalId: string;
   status: ProposalStatus;
@@ -38,8 +52,22 @@ export function ProposalWorkspace({
   editable: boolean;
   versions: VersionHistoryEntry[];
   materialCount: number;
+  canSubmitForApproval: boolean;
 }) {
   const router = useRouter();
+  const [submitting, startSubmitTransition] = useTransition();
+
+  function handleSubmitForApproval() {
+    startSubmitTransition(async () => {
+      const result = await submitForApprovalAction(proposalId, versionId);
+      if (result.ok) {
+        toast.success("Submitted for approval.");
+        router.refresh();
+      } else {
+        toast.error(result.error.message);
+      }
+    });
+  }
 
   async function saveSnapshot(next: ProposalSnapshot): Promise<boolean> {
     const result = await saveManualRevisionAction(proposalId, versionId, next);
@@ -72,6 +100,31 @@ export function ProposalWorkspace({
       />
 
       <ReadinessPanel title="Approval readiness" blockers={editable ? approvalBlockers : []} />
+
+      {canSubmitForApproval ? (
+        <div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button disabled={submitting}>
+                <Send className="size-4" /> Submit for Approval
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Submit version {versionNumber} for approval?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This proposal becomes read-only until an approver decides. You will not be able to edit or
+                  regenerate content while it is pending.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSubmitForApproval}>Submit</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Client Details</h2>

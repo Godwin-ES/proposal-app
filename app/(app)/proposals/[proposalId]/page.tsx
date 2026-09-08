@@ -104,6 +104,7 @@ export default async function ProposalPage({
       approvalBlockers={approvalBlockers}
       editable={isVersionWritableStatus(proposal.status)}
       materialCount={materials.filter((m) => m.extraction_status === "ready").length}
+      canSubmitForApproval={isEditableStatus(proposal.status) && approvalBlockers.length === 0}
       versions={versions.map((v) => ({
         id: v.id,
         versionNumber: v.version_number,
