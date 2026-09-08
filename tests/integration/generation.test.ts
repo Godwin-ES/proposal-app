@@ -57,7 +57,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
     if (proposalIds.length > 0) await admin.from("proposals").delete().in("id", proposalIds);
   });
 
-  async function freshProposal(overrides: Record<string, unknown> = {}) {
+  async function freshProposal(overrides: Partial<proposalsRepo.ProposalRow> = {}) {
     const proposal = await proposalsRepo.createProposal(supabase, user.userId, user.fullName);
     proposalIds.push(proposal.id);
     if (Object.keys(overrides).length > 0) {

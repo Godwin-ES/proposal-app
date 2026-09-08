@@ -2,16 +2,19 @@ import { notFound } from "next/navigation";
 import { requireSalesperson } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getProposalForOwner } from "@/lib/proposals/service";
+import { getVersionHistory } from "@/lib/proposals/version-service";
 import { rowToIntake } from "@/lib/repositories/proposals";
 import { listMaterials } from "@/lib/materials/service";
-import { evaluateGenerationReadiness } from "@/lib/domain/readiness";
-import { isEditableStatus } from "@/lib/domain/state-machine";
+import { listApprovalsForProposal } from "@/lib/repositories/approvals";
+import { evaluateApprovalReadiness, evaluateGenerationReadiness } from "@/lib/domain/readiness";
+import { isEditableStatus, isVersionWritableStatus } from "@/lib/domain/state-machine";
 import { PageHeader } from "@/components/shared/page-header";
 import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { IntakeForm } from "@/components/proposals/intake-form";
 import { SupportingMaterialPanel } from "@/components/proposals/supporting-material-panel";
 import { GenerateDraftPanel } from "@/components/proposals/generate-draft-panel";
+import { ProposalWorkspace } from "@/components/proposals/proposal-workspace";
 import { DomainError } from "@/lib/domain/errors";
 
 export default async function ProposalPage({
@@ -38,47 +41,78 @@ export default async function ProposalPage({
   const materials = await listMaterials(supabase, proposal.id, user);
   const materialsEditable = isEditableStatus(proposal.status);
 
-  const generationBlockers = evaluateGenerationReadiness(intake);
-  const failedMaterials = materials.filter((m) => m.extraction_status === "failed");
-  const pendingMaterials = materials.filter((m) => m.extraction_status === "pending");
-  if (failedMaterials.length > 0) {
-    generationBlockers.push(`Remove or retry failed file(s): ${failedMaterials.map((m) => m.filename).join(", ")}`);
+  if (!hasVersion) {
+    const generationBlockers = evaluateGenerationReadiness(intake);
+    const failedMaterials = materials.filter((m) => m.extraction_status === "failed");
+    const pendingMaterials = materials.filter((m) => m.extraction_status === "pending");
+    if (failedMaterials.length > 0) {
+      generationBlockers.push(`Remove or retry failed file(s): ${failedMaterials.map((m) => m.filename).join(", ")}`);
+    }
+    if (pendingMaterials.length > 0) {
+      generationBlockers.push("Supporting material is still processing");
+    }
+
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title={proposal.client_name || "New proposal"}
+          description={proposal.company_name || undefined}
+          actions={<StatusBadge status={proposal.status} />}
+        />
+        <ReadinessPanel title="Generation readiness" blockers={generationBlockers} />
+        <IntakeForm proposalId={proposal.id} defaultValues={intake} editable />
+        <SupportingMaterialPanel
+          proposalId={proposal.id}
+          editable={materialsEditable}
+          initialMaterials={materials.map((m) => ({
+            id: m.id,
+            filename: m.filename,
+            sizeBytes: m.size_bytes,
+            extractionStatus: m.extraction_status,
+            warning: m.warning,
+          }))}
+        />
+        <GenerateDraftPanel proposalId={proposal.id} ready={generationBlockers.length === 0} />
+      </div>
+    );
   }
-  if (pendingMaterials.length > 0) {
-    generationBlockers.push("Supporting material is still processing");
-  }
+
+  const [versions, approvals] = await Promise.all([
+    getVersionHistory(supabase, proposal.id, user),
+    listApprovalsForProposal(supabase, proposal.id),
+  ]);
+
+  const currentVersion = versions.find((v) => v.id === proposal.current_version_id);
+  if (!currentVersion) notFound();
+
+  const approvedVersionIds = new Set(approvals.filter((a) => a.decision === "approved").map((a) => a.version_id));
+  const approvalBlockers = evaluateApprovalReadiness({
+    intake,
+    snapshot: currentVersion.snapshot,
+    hasCurrentVersion: true,
+  });
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title={proposal.client_name || "New proposal"}
-        description={proposal.company_name || undefined}
-        actions={<StatusBadge status={proposal.status} />}
-      />
-
-      {!hasVersion ? (
-        <>
-          <ReadinessPanel title="Generation readiness" blockers={generationBlockers} />
-          <IntakeForm proposalId={proposal.id} defaultValues={intake} editable />
-          <SupportingMaterialPanel
-            proposalId={proposal.id}
-            editable={materialsEditable}
-            initialMaterials={materials.map((m) => ({
-              id: m.id,
-              filename: m.filename,
-              sizeBytes: m.size_bytes,
-              extractionStatus: m.extraction_status,
-              warning: m.warning,
-            }))}
-          />
-          <GenerateDraftPanel proposalId={proposal.id} ready={generationBlockers.length === 0} />
-        </>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          This proposal has a generated version. The full Proposal Workspace (sections, version history, approval,
-          delivery) is available once those areas of the build are complete.
-        </p>
-      )}
-    </div>
+    <ProposalWorkspace
+      proposalId={proposal.id}
+      status={proposal.status}
+      ownerName={intake.salespersonName || "—"}
+      updatedAt={proposal.updated_at}
+      versionId={currentVersion.id}
+      versionNumber={currentVersion.version_number}
+      snapshot={currentVersion.snapshot}
+      approvalBlockers={approvalBlockers}
+      editable={isVersionWritableStatus(proposal.status)}
+      versions={versions.map((v) => ({
+        id: v.id,
+        versionNumber: v.version_number,
+        createdAt: v.created_at,
+        changeType: v.change_type,
+        changedSection: v.changed_section,
+        snapshot: v.snapshot,
+        isCurrent: v.id === proposal.current_version_id,
+        isApproved: approvedVersionIds.has(v.id),
+      }))}
+    />
   );
 }

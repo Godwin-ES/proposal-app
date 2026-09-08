@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { requireSalesperson } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import * as proposalService from "@/lib/proposals/service";
+import { saveManualRevision } from "@/lib/proposals/version-service";
 import { DomainError } from "@/lib/domain/errors";
-import type { ActionResult, ProposalIntake } from "@/lib/domain/types";
+import type { ActionResult, ProposalIntake, ProposalSnapshot } from "@/lib/domain/types";
 
 export async function createProposalAction(): Promise<void> {
   const user = await requireSalesperson();
@@ -44,6 +45,22 @@ export async function updateClientEmailAction(
     return { ok: true, data: null };
   } catch (error) {
     return { ok: false, error: toActionError(error, "update-client-email") };
+  }
+}
+
+export async function saveManualRevisionAction(
+  proposalId: string,
+  expectedVersionId: string,
+  snapshot: ProposalSnapshot
+): Promise<ActionResult<{ versionId: string }>> {
+  try {
+    const user = await requireSalesperson();
+    const supabase = await createSupabaseServerClient();
+    const version = await saveManualRevision(supabase, proposalId, expectedVersionId, snapshot, user);
+    revalidatePath(`/proposals/${proposalId}`);
+    return { ok: true, data: { versionId: version.id } };
+  } catch (error) {
+    return { ok: false, error: toActionError(error, "manual-edit") };
   }
 }
 
