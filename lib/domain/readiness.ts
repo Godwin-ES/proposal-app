@@ -54,17 +54,6 @@ export function evaluateDeliveryReadiness(input: {
   pdfStatus: "not_generated" | "generating" | "ready" | "failed";
   hasUnresolvedUncertainAttempt: boolean;
 }): string[] {
-  // Delivered is a terminal success state, not a missing prerequisite — the
-  // proposal already went through approval and got sent. Reusing "Internal
-  // approval of the current version" here would be literally true (status
-  // isn't 'approved' any more) but reads as if approval never happened.
-  // prepare_delivery_attempt also only accepts status = 'approved' (see
-  // supabase/migrations/003_week3_business_rpcs.sql), so a delivered
-  // proposal genuinely can't be resent — this message says why.
-  if (input.status === "delivered") {
-    return ["This proposal has already been delivered"];
-  }
-
   const blockers: string[] = [];
 
   if (isBlank(input.clientEmail)) blockers.push("A valid client email address");

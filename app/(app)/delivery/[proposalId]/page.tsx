@@ -66,6 +66,7 @@ export default async function DeliveryPage({
         proposalId={proposal.id}
         versionId={version.id}
         recipient={proposal.client_email}
+        delivered={proposal.status === "delivered"}
         blockers={blockers}
         pdfStatus={version.pdf_status}
         pdfError={version.pdf_error}
