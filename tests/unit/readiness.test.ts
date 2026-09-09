@@ -121,4 +121,10 @@ describe("evaluateDeliveryReadiness", () => {
   it("blocks delivery when an uncertain attempt is unresolved", () => {
     expect(evaluateDeliveryReadiness({ ...readyBase, hasUnresolvedUncertainAttempt: true }).length).toBeGreaterThan(0);
   });
+
+  it("reports an already-delivered proposal distinctly, not as a missing-approval blocker", () => {
+    const blockers = evaluateDeliveryReadiness({ ...readyBase, status: "delivered" as const });
+    expect(blockers).toEqual(["This proposal has already been delivered"]);
+    expect(blockers).not.toContain("Internal approval of the current version");
+  });
 });
