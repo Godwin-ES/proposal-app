@@ -17,27 +17,44 @@ import type { ProposalSnapshot } from "@/lib/domain/types";
 
 export function ProposalDetailsEditor({
   client,
+  clientEmail,
   onSave,
+  onSaveEmail,
 }: {
   client: ProposalSnapshot["client"];
+  clientEmail: string;
   onSave: (client: ProposalSnapshot["client"]) => Promise<boolean>;
+  onSaveEmail: (email: string) => Promise<boolean>;
 }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState(client);
+  const [email, setEmail] = useState(clientEmail);
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     setSaving(true);
-    const ok = await onSave(values);
+    // Client Email is saved through a separate action from the rest of these
+    // fields (it isn't part of the versioned snapshot, so correcting it must
+    // never create a new proposal version) — only call each save path when
+    // its own fields actually changed.
+    const detailsChanged = JSON.stringify(values) !== JSON.stringify(client);
+    const emailChanged = email.trim() !== clientEmail.trim();
+    const [detailsOk, emailOk] = await Promise.all([
+      detailsChanged ? onSave(values) : Promise.resolve(true),
+      emailChanged ? onSaveEmail(email) : Promise.resolve(true),
+    ]);
     setSaving(false);
-    if (ok) setOpen(false);
+    if (detailsOk && emailOk) setOpen(false);
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (next) setValues(client);
+        if (next) {
+          setValues(client);
+          setEmail(clientEmail);
+        }
         setOpen(next);
       }}
     >
@@ -83,6 +100,17 @@ export function ProposalDetailsEditor({
               value={values.salespersonName}
               onChange={(e) => setValues((v) => ({ ...v, salespersonName: e.target.value }))}
             />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="edit-clientEmail">Client Email (delivery address)</Label>
+            <Input
+              id="edit-clientEmail"
+              type="email"
+              value={email}
+              placeholder="client@company.com"
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Saved separately — never creates a new proposal version.</p>
           </div>
         </div>
         <DialogFooter>

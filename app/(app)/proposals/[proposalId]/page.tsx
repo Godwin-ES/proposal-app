@@ -112,6 +112,7 @@ export default async function ProposalPage({
       snapshot={currentVersion.snapshot}
       approvalBlockers={approvalBlockers}
       clarificationFlags={(currentVersion.clarification_flags as string[] | null) ?? []}
+      clientEmail={intake.clientEmail}
       changeRequest={changeRequest ? { comments: changeRequest.comments, createdAt: changeRequest.created_at } : null}
       editable={isVersionWritableStatus(proposal.status)}
       materialCount={materials.filter((m) => m.extraction_status === "ready").length}

@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { saveManualRevisionAction } from "@/actions/proposals";
+import { saveManualRevisionAction, updateClientEmailAction } from "@/actions/proposals";
 import { submitForApprovalAction } from "@/actions/approvals";
 import { ProposalHeader } from "@/components/proposals/proposal-header";
 import { LocalDateTime } from "@/components/shared/local-datetime";
@@ -47,6 +47,7 @@ export function ProposalWorkspace({
   materialCount,
   canSubmitForApproval,
   changeRequest,
+  clientEmail,
 }: {
   proposalId: string;
   status: ProposalStatus;
@@ -62,6 +63,7 @@ export function ProposalWorkspace({
   materialCount: number;
   canSubmitForApproval: boolean;
   changeRequest: { comments: string | null; createdAt: string } | null;
+  clientEmail: string;
 }) {
   const router = useRouter();
   const [submitting, startSubmitTransition] = useTransition();
@@ -82,6 +84,17 @@ export function ProposalWorkspace({
     const result = await saveManualRevisionAction(proposalId, versionId, next);
     if (result.ok) {
       toast.success("Proposal updated.");
+      router.refresh();
+      return true;
+    }
+    toast.error(result.error.message);
+    return false;
+  }
+
+  async function saveClientEmail(email: string): Promise<boolean> {
+    const result = await updateClientEmailAction(proposalId, email);
+    if (result.ok) {
+      toast.success("Client email updated.");
       router.refresh();
       return true;
     }
@@ -181,7 +194,9 @@ export function ProposalWorkspace({
         {editable ? (
           <ProposalDetailsEditor
             client={snapshot.client}
+            clientEmail={clientEmail}
             onSave={(client) => saveSnapshot({ ...snapshot, client })}
+            onSaveEmail={saveClientEmail}
           />
         ) : null}
       </div>
