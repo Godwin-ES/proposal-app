@@ -1,6 +1,5 @@
 import "server-only";
 import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
 import { DomainError } from "@/lib/domain/errors";
 
 export const SUPPORTED_EXTENSIONS = ["txt", "md", "pdf", "docx"] as const;
@@ -30,10 +29,25 @@ export async function extractText(extension: SupportedExtension, buffer: Buffer)
         return result.value;
       }
       case "pdf": {
-        const parser = new PDFParse({ data: new Uint8Array(buffer) });
-        const result = await parser.getText();
-        await parser.destroy();
-        return result.text;
+        // pdfjs evaluates browser/canvas globals during module initialization.
+        // On Vercel that previously crashed every proposal SSR request with
+        // `ReferenceError: DOMMatrix is not defined`, even when no PDF was
+        // being processed, because pdf-parse was imported eagerly at module
+        // scope. Load the worker/canvas factory first and only initialize the
+        // PDF stack when a PDF actually needs extraction.
+        const { CanvasFactory } = await import("pdf-parse/worker");
+        const { PDFParse } = await import("pdf-parse");
+        const parser = new PDFParse({
+          data: new Uint8Array(buffer),
+          CanvasFactory,
+        });
+
+        try {
+          const result = await parser.getText();
+          return result.text;
+        } finally {
+          await parser.destroy();
+        }
       }
     }
   } catch {
