@@ -10,6 +10,29 @@ function client() {
   return new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 }
 
+/**
+ * Gemini's `responseSchema` accepts only a restricted subset of JSON Schema
+ * (based on OpenAPI 3.0) and rejects the standard `const` keyword outright
+ * ("Unknown name \"const\"... Cannot find field") — it only understands
+ * `enum`. `z.toJSONSchema` emits `const` for any `z.literal(...)` field (used
+ * here to pin the regeneration schema's `section` discriminator), so that
+ * has to be rewritten before the schema reaches Gemini. Anthropic's tool
+ * schema supports `const` natively, so this is applied only on the Gemini
+ * path, not in the shared `toProviderJsonSchema` converter.
+ */
+export function sanitizeForGemini(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(sanitizeForGemini);
+  if (node === null || typeof node !== "object") return node;
+
+  const { const: constValue, ...rest } = node as Record<string, unknown>;
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rest)) {
+    sanitized[key] = sanitizeForGemini(value);
+  }
+  if (constValue !== undefined) sanitized.enum = [constValue];
+  return sanitized;
+}
+
 async function callStructured(model: string, system: string, user: string, schema: Record<string, unknown>) {
   const ai = client();
   const started = Date.now();
@@ -60,7 +83,7 @@ export function createGeminiProvider(): ProposalAIProvider {
   return {
     async generate(request: GenerationRequest): Promise<AIResult<import("@/lib/ai/schemas").GeneratedSections>> {
       const { system, user } = buildGenerationPrompt(request.intake, request.supportingMaterials);
-      const schema = toProviderJsonSchema(generatedSectionsSchema);
+      const schema = sanitizeForGemini(toProviderJsonSchema(generatedSectionsSchema)) as Record<string, unknown>;
       const result = await callStructured(request.model, system, user, schema);
 
       const parsed = generatedSectionsSchema.safeParse(result.json);
@@ -91,7 +114,7 @@ export function createGeminiProvider(): ProposalAIProvider {
         request.supportingMaterials
       );
       const sectionSchema = REGENERATION_SCHEMA_BY_SECTION[request.targetSection];
-      const schema = toProviderJsonSchema(sectionSchema);
+      const schema = sanitizeForGemini(toProviderJsonSchema(sectionSchema)) as Record<string, unknown>;
       const result = await callStructured(request.model, system, user, schema);
 
       const parsed = sectionSchema.safeParse(result.json);
