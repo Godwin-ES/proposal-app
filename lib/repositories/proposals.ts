@@ -78,6 +78,29 @@ export async function listPendingApprovalProposals(
   return (data ?? []) as ProposalRow[];
 }
 
+export async function listProposalsByStatuses(
+  supabase: SupabaseClient<Database>,
+  statuses: ProposalStatus[]
+): Promise<ProposalRow[]> {
+  const { data, error } = await supabase
+    .from("proposals")
+    .select()
+    .in("status", statuses)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw new DomainError("VALIDATION_ERROR", "list-by-status", error.message, true);
+  return (data ?? []) as ProposalRow[];
+}
+
+// proposals has no DELETE policy (see supabase/migrations/002_week3_rls.sql) —
+// every mutation goes through a security-definer RPC, delete included, so
+// this must call one rather than `.from("proposals").delete()`, which would
+// silently match zero rows under RLS instead of erroring.
+export async function deleteProposal(supabase: SupabaseClient<Database>, proposalId: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_draft_proposal", { p_proposal_id: proposalId });
+  if (error) throw mapRpcError(error, "delete-proposal");
+}
+
 export async function updatePreGenerationIntake(
   supabase: SupabaseClient<Database>,
   proposalId: string,

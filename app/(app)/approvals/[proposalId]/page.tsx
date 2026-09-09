@@ -26,8 +26,10 @@ export default async function ApprovalReviewPage({
     throw error;
   }
 
-  const { proposal, version } = review;
+  const { proposal, version, decisions } = review;
   const { snapshot } = version;
+  const isPending = proposal.status === "pending_approval";
+  const latestDecision = decisions[0] ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,6 +44,18 @@ export default async function ApprovalReviewPage({
         {proposal.approval_submitted_at ? formatDateTime(proposal.approval_submitted_at) : "—"}. This
         review is read-only.
       </p>
+
+      {!isPending && latestDecision ? (
+        <div className="rounded-md border bg-muted/40 p-4 text-sm">
+          <p className="font-medium">
+            {latestDecision.decision === "approved" ? "Approved" : "Changes requested"} on{" "}
+            {formatDateTime(latestDecision.created_at)}
+          </p>
+          {latestDecision.comments ? (
+            <p className="mt-1 text-muted-foreground">&ldquo;{latestDecision.comments}&rdquo;</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <ProposalSectionCard title="Introduction" content={snapshot.content.introduction} />
       <ProposalSectionCard title="Project Scope" content={snapshot.content.projectScope} />
@@ -62,7 +76,9 @@ export default async function ApprovalReviewPage({
       </div>
       <ProposalSectionCard title="Next Steps" content={snapshot.content.nextSteps} />
 
-      <ApprovalDecisionPanel proposalId={proposal.id} versionId={version.id} versionNumber={version.version_number} />
+      {isPending ? (
+        <ApprovalDecisionPanel proposalId={proposal.id} versionId={version.id} versionNumber={version.version_number} />
+      ) : null}
     </div>
   );
 }

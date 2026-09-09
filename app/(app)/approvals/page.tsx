@@ -1,17 +1,18 @@
 import { requireApprover } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getApprovalQueue } from "@/lib/approvals/service";
+import { listApprovalStatusProposals } from "@/lib/approvals/service";
 import { getVersion } from "@/lib/repositories/versions";
 import { PageHeader } from "@/components/shared/page-header";
-import { ApprovalQueue, type ApprovalQueueRow } from "@/components/approvals/approval-queue";
+import { ApprovalStatusTabs } from "@/components/approvals/approval-status-tabs";
+import type { ApprovalQueueRow } from "@/components/approvals/approval-queue";
+import type { ProposalStatus } from "@/lib/domain/types";
+import type { ProposalRow } from "@/lib/repositories/proposals";
 
-export default async function ApprovalsPage() {
-  await requireApprover();
-  const supabase = await createSupabaseServerClient();
-  const proposals = await getApprovalQueue(supabase);
+const STATUSES: ProposalStatus[] = ["pending_approval", "changes_requested", "approved"];
 
-  const rows: ApprovalQueueRow[] = await Promise.all(
-    proposals.map(async (p) => {
+async function toRows(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, proposals: ProposalRow[]) {
+  return Promise.all(
+    proposals.map(async (p): Promise<ApprovalQueueRow> => {
       const version = p.current_version_id ? await getVersion(supabase, p.current_version_id) : null;
       return {
         proposalId: p.id,
@@ -23,11 +24,25 @@ export default async function ApprovalsPage() {
       };
     })
   );
+}
+
+export default async function ApprovalsPage() {
+  await requireApprover();
+  const supabase = await createSupabaseServerClient();
+  const proposals = await listApprovalStatusProposals(supabase, STATUSES);
+
+  const rowsByStatus = {} as Record<ProposalStatus, ApprovalQueueRow[]>;
+  for (const status of STATUSES) {
+    rowsByStatus[status] = await toRows(
+      supabase,
+      proposals.filter((p) => p.status === status)
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Approvals" description="Proposals awaiting your review." />
-      <ApprovalQueue rows={rows} />
+      <PageHeader title="Approvals" description="Proposals awaiting your review or already decided." />
+      <ApprovalStatusTabs rowsByStatus={rowsByStatus} />
     </div>
   );
 }

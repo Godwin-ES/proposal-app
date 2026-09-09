@@ -13,15 +13,17 @@ export type ApprovalQueueRow = {
   submittedAt: string | null;
 };
 
-export function ApprovalQueue({ rows }: { rows: ApprovalQueueRow[] }) {
+export function ApprovalQueue({
+  rows,
+  emptyTitle = "Nothing waiting for review",
+  emptyDescription = "Proposals submitted by a salesperson will appear here.",
+}: {
+  rows: ApprovalQueueRow[];
+  emptyTitle?: string;
+  emptyDescription?: string;
+}) {
   if (rows.length === 0) {
-    return (
-      <EmptyState
-        icon={ClipboardCheck}
-        title="Nothing waiting for review"
-        description="Proposals submitted by a salesperson will appear here."
-      />
-    );
+    return <EmptyState icon={ClipboardCheck} title={emptyTitle} description={emptyDescription} />;
   }
 
   return (

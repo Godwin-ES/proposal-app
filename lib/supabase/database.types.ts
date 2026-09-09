@@ -493,6 +493,10 @@ export type Database = {
         Args: { p_version_id: string }
         Returns: boolean
       }
+      delete_draft_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: undefined
+      }
       create_proposal_version: {
         Args: {
           p_change_type: string

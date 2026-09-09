@@ -64,6 +64,18 @@ export async function saveManualRevisionAction(
   }
 }
 
+export async function deleteProposalAction(proposalId: string): Promise<ActionResult<null>> {
+  try {
+    const user = await requireSalesperson();
+    const supabase = await createSupabaseServerClient();
+    await proposalService.deleteDraftProposal(supabase, user, proposalId);
+    revalidatePath("/dashboard");
+    return { ok: true, data: null };
+  } catch (error) {
+    return { ok: false, error: toActionError(error, "delete-proposal") };
+  }
+}
+
 function toActionError(error: unknown, stage: string) {
   if (error instanceof DomainError) return error.toActionError();
   return {
