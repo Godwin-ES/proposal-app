@@ -47,10 +47,10 @@ const TABS: TabConfig[] = [
 
 export function ProposalStatusTabs({ proposals }: { proposals: ProposalRow[] }) {
   return (
-    <Tabs defaultValue="in-progress" className="gap-4">
+    <Tabs defaultValue="in-progress" className="gap-0">
       <TabsList
         variant="line"
-        className="grid h-auto w-full grid-cols-2 gap-0 rounded-none border-b bg-transparent p-0 sm:grid-cols-4"
+        className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent p-0"
       >
         {TABS.map((tab) => {
           const count = proposals.filter((p) => tab.statuses.includes(p.status)).length;
@@ -59,22 +59,27 @@ export function ProposalStatusTabs({ proposals }: { proposals: ProposalRow[] }) 
               key={tab.key}
               value={tab.key}
               className={cn(
-                "group h-auto w-full flex-none flex-col items-start gap-1.5 rounded-none border-0 border-b-2 border-transparent",
-                "bg-transparent px-3 pt-1 pb-3 text-left shadow-none after:hidden",
-                "data-active:bg-transparent data-active:border-b-foreground data-active:shadow-none"
+                "group h-10 flex-none shrink-0 items-center gap-2 rounded-none border-0 border-b-2 border-transparent",
+                "bg-transparent px-4 text-sm font-medium text-muted-foreground shadow-none after:hidden",
+                "data-active:bg-transparent data-active:border-b-foreground data-active:text-foreground data-active:shadow-none"
               )}
             >
-              <span className="text-sm font-medium text-muted-foreground group-data-active:text-foreground">
-                {tab.label}
+              <span>{tab.label}</span>
+              <span
+                className={cn(
+                  "flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-semibold tabular-nums text-muted-foreground",
+                  "group-data-active:bg-foreground group-data-active:text-background"
+                )}
+              >
+                {count}
               </span>
-              <span className="text-2xl leading-none font-semibold tabular-nums text-foreground">{count}</span>
             </TabsTrigger>
           );
         })}
       </TabsList>
 
       {TABS.map((tab) => (
-        <TabsContent key={tab.key} value={tab.key}>
+        <TabsContent key={tab.key} value={tab.key} className="mt-4">
           <RecentProposals
             proposals={proposals.filter((p) => tab.statuses.includes(p.status))}
             emptyTitle={tab.emptyTitle}
