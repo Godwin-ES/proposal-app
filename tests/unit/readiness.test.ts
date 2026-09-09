@@ -58,6 +58,11 @@ describe("evaluateGenerationReadiness", () => {
     expect(blockers).toContain("Recommended Services / Deliverables");
   });
 
+  it("blocks generation when client email is missing", () => {
+    const blockers = evaluateGenerationReadiness({ ...completeIntake, clientEmail: "" });
+    expect(blockers).toContain("Client Email");
+  });
+
   it("blocks generation when proposed timeline is missing", () => {
     const blockers = evaluateGenerationReadiness({ ...completeIntake, proposedTimeline: "" });
     expect(blockers).toContain("Proposed Timeline");

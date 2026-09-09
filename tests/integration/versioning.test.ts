@@ -38,6 +38,7 @@ const VALID_AI_RESULT = {
 
 const COMPLETE_INTAKE = {
   client_name: "Jane Doe",
+  client_email: "jane@acme.test",
   company_name: "Acme Co",
   salesperson_name: "Sam Rep",
   client_needs_summary: "Faster onboarding",

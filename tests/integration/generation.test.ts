@@ -69,6 +69,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
 
   const completeIntakeFields = {
     client_name: "Jane Doe",
+    client_email: "jane@acme.test",
     company_name: "Acme Co",
     salesperson_name: "Sam Rep",
     client_needs_summary: "Faster onboarding",
@@ -205,6 +206,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
 
   const COMPLETE_INTAKE = {
     client_name: "Jane Doe",
+    client_email: "jane@acme.test",
     company_name: "Acme Co",
     salesperson_name: "Sam Rep",
     client_needs_summary: "Faster onboarding",

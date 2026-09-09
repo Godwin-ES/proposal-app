@@ -150,7 +150,10 @@ export function IntakeForm({
 
             <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end sm:gap-3">
               <div className="flex flex-1 flex-col gap-2">
-                <Label htmlFor="clientEmail">Client Email (delivery address)</Label>
+                <Label htmlFor="clientEmail">
+                  Client Email (delivery address)
+                  <span className="text-destructive"> *</span>
+                </Label>
                 <Input
                   id="clientEmail"
                   type="email"
@@ -164,7 +167,9 @@ export function IntakeForm({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Saved separately — correcting it never creates a new proposal version.
+              Saved separately from the rest of this form — click <strong>Save Email</strong> to store it.
+              Clicking Save Intake alone will not save this field, and it&apos;s required before you can generate
+              a draft.
             </p>
           </CardContent>
         </Card>

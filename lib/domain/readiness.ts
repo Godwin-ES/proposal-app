@@ -8,6 +8,10 @@ export function evaluateGenerationReadiness(intake: ProposalIntake): string[] {
   const blockers: string[] = [];
   if (isBlank(intake.clientName)) blockers.push("Client Name");
   if (isBlank(intake.companyName)) blockers.push("Company Name");
+  // Saved via its own "Save Email" action, independent of Save Intake (see
+  // components/proposals/intake-form.tsx) — easy to type in and forget to
+  // actually save, which otherwise only surfaces much later at delivery.
+  if (isBlank(intake.clientEmail)) blockers.push("Client Email");
   if (isBlank(intake.salespersonName)) blockers.push("Salesperson Name");
   if (isBlank(intake.dateOfCall)) blockers.push("Date of Call");
   if (isBlank(intake.clientNeedsSummary)) blockers.push("Summary of Client's Needs");

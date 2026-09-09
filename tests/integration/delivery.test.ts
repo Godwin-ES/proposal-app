@@ -106,9 +106,9 @@ describe.skipIf(!hasCredentials)("delivery pipeline (hosted Supabase integration
     const proposal = await proposalsRepo.createProposal(salesClient, salesUser.userId, salesUser.fullName);
     proposalIds.push(proposal.id);
     await admin.from("proposals").update(COMPLETE_INTAKE).eq("id", proposal.id);
+    await updateClientEmail(salesClient, proposal.id, email);
     mockGenerate.mockResolvedValueOnce(VALID_AI_RESULT);
     const version = await generateInitialDraft(salesClient, proposal.id, "anthropic", salesUser);
-    await updateClientEmail(salesClient, proposal.id, email);
     await submitProposalForApproval(salesClient, proposal.id, version.id, salesUser);
     await decideProposalApproval(approverClient, {
       proposalId: proposal.id,
