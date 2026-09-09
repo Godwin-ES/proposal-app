@@ -38,6 +38,7 @@ export function ProposalWorkspace({
   versionNumber,
   snapshot,
   approvalBlockers,
+  clarificationFlags,
   editable,
   versions,
   materialCount,
@@ -52,6 +53,7 @@ export function ProposalWorkspace({
   versionNumber: number;
   snapshot: ProposalSnapshot;
   approvalBlockers: string[];
+  clarificationFlags: string[];
   editable: boolean;
   versions: VersionHistoryEntry[];
   materialCount: number;
@@ -111,6 +113,19 @@ export function ProposalWorkspace({
           <p className="mt-1 text-amber-800 dark:text-amber-300">
             {changeRequest.comments ? `“${changeRequest.comments}”` : "No additional comments were left."}
           </p>
+        </div>
+      ) : null}
+
+      {clarificationFlags.length > 0 ? (
+        <div className="rounded-md border border-blue-300 bg-blue-50 p-4 text-sm dark:border-blue-900 dark:bg-blue-950">
+          <p className="font-medium text-blue-900 dark:text-blue-200">
+            The AI flagged this for your review before submitting:
+          </p>
+          <ul className="mt-1 list-disc pl-5 text-blue-800 dark:text-blue-300">
+            {clarificationFlags.map((flag, i) => (
+              <li key={i}>{flag}</li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
