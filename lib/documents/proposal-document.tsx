@@ -25,8 +25,8 @@ const styles = StyleSheet.create({
   page: { paddingTop: 0, paddingBottom: 64, paddingHorizontal: 48, fontSize: BODY_SIZE, fontFamily: "Helvetica", color: INK },
   accentBar: { height: 6, backgroundColor: ACCENT, marginBottom: 32, marginHorizontal: -48 },
   title: { fontSize: 22, fontWeight: 700, marginBottom: 10, color: INK },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", columnGap: 14, marginBottom: 14 },
-  metaItem: { fontSize: 9.5, color: MUTED },
+  metaRow: { flexDirection: "column", marginBottom: 14 },
+  metaItem: { fontSize: 9.5, color: MUTED, marginBottom: 2 },
   metaLabel: { color: MUTED },
   headerRule: { borderBottomWidth: 1, borderBottomColor: RULE, marginBottom: 22 },
 
@@ -98,7 +98,7 @@ export function ProposalDocument({ snapshot }: { snapshot: ProposalSnapshot }) {
             {client.salespersonName}
           </Text>
           <Text style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Date </Text>
+            <Text style={styles.metaLabel}>Date: </Text>
             {client.dateOfCall}
           </Text>
         </View>
