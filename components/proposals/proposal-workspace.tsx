@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { saveManualRevisionAction } from "@/actions/proposals";
 import { submitForApprovalAction } from "@/actions/approvals";
 import { ProposalHeader } from "@/components/proposals/proposal-header";
+import { LocalDateTime } from "@/components/shared/local-datetime";
 import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { ProposalSectionCard } from "@/components/proposals/proposal-section-card";
 import { ProposalEditorDialog } from "@/components/proposals/proposal-editor-dialog";
@@ -41,6 +42,7 @@ export function ProposalWorkspace({
   versions,
   materialCount,
   canSubmitForApproval,
+  changeRequest,
 }: {
   proposalId: string;
   status: ProposalStatus;
@@ -54,6 +56,7 @@ export function ProposalWorkspace({
   versions: VersionHistoryEntry[];
   materialCount: number;
   canSubmitForApproval: boolean;
+  changeRequest: { comments: string | null; createdAt: string } | null;
 }) {
   const router = useRouter();
   const [submitting, startSubmitTransition] = useTransition();
@@ -99,6 +102,17 @@ export function ProposalWorkspace({
         ownerName={ownerName}
         updatedAt={updatedAt}
       />
+
+      {changeRequest ? (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950">
+          <p className="font-medium text-amber-900 dark:text-amber-200">
+            Changes requested on <LocalDateTime value={changeRequest.createdAt} />
+          </p>
+          <p className="mt-1 text-amber-800 dark:text-amber-300">
+            {changeRequest.comments ? `“${changeRequest.comments}”` : "No additional comments were left."}
+          </p>
+        </div>
+      ) : null}
 
       <ReadinessPanel title="Approval readiness" blockers={editable ? approvalBlockers : []} />
 

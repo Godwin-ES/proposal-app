@@ -92,6 +92,16 @@ export default async function ProposalPage({
     hasCurrentVersion: true,
   });
 
+  // While status is changes_requested, current_version_id still points at
+  // exactly the version the approver decided on (a revision moves the
+  // proposal out of changes_requested — see computeEditableStatus in
+  // lib/proposals/version-service.ts), so the decision tied to that version
+  // is always the one to surface.
+  const changeRequest =
+    proposal.status === "changes_requested"
+      ? (approvals.find((a) => a.version_id === currentVersion.id && a.decision === "changes_requested") ?? null)
+      : null;
+
   return (
     <ProposalWorkspace
       proposalId={proposal.id}
@@ -102,6 +112,7 @@ export default async function ProposalPage({
       versionNumber={currentVersion.version_number}
       snapshot={currentVersion.snapshot}
       approvalBlockers={approvalBlockers}
+      changeRequest={changeRequest ? { comments: changeRequest.comments, createdAt: changeRequest.created_at } : null}
       editable={isVersionWritableStatus(proposal.status)}
       materialCount={materials.filter((m) => m.extraction_status === "ready").length}
       canSubmitForApproval={isEditableStatus(proposal.status) && approvalBlockers.length === 0}
