@@ -48,40 +48,47 @@ describe("evaluateGenerationReadiness", () => {
     expect(blockers).toContain("Project Scope");
   });
 
-  it("does not block generation when pricing is missing", () => {
+  it("blocks generation when pricing is missing", () => {
     const blockers = evaluateGenerationReadiness({ ...completeIntake, estimatedPricing: "" });
-    expect(blockers).toEqual([]);
+    expect(blockers).toContain("Estimated Pricing");
+  });
+
+  it("blocks generation when recommended services are missing", () => {
+    const blockers = evaluateGenerationReadiness({ ...completeIntake, recommendedServices: "" });
+    expect(blockers).toContain("Recommended Services / Deliverables");
+  });
+
+  it("blocks generation when proposed timeline is missing", () => {
+    const blockers = evaluateGenerationReadiness({ ...completeIntake, proposedTimeline: "" });
+    expect(blockers).toContain("Proposed Timeline");
+  });
+
+  it("blocks generation when date of call is missing", () => {
+    const blockers = evaluateGenerationReadiness({ ...completeIntake, dateOfCall: "" });
+    expect(blockers).toContain("Date of Call");
   });
 });
 
 describe("evaluateApprovalReadiness", () => {
-  it("has no blockers when intake and snapshot are complete", () => {
-    expect(
-      evaluateApprovalReadiness({ intake: completeIntake, snapshot: completeSnapshot, hasCurrentVersion: true })
-    ).toEqual([]);
+  it("has no blockers when the snapshot is complete", () => {
+    expect(evaluateApprovalReadiness({ snapshot: completeSnapshot, hasCurrentVersion: true })).toEqual([]);
   });
 
-  it("blocks approval when pricing is missing even though generation succeeded", () => {
+  it("blocks approval when pricing content is missing", () => {
     const blockers = evaluateApprovalReadiness({
-      intake: { ...completeIntake, estimatedPricing: "" },
       snapshot: { ...completeSnapshot, content: { ...completeSnapshot.content, pricing: "" } },
       hasCurrentVersion: true,
     });
-    expect(blockers).toContain("Estimated Pricing");
+    expect(blockers).toContain("Pricing");
   });
 
   it("blocks approval when there is no current version", () => {
-    const blockers = evaluateApprovalReadiness({
-      intake: completeIntake,
-      snapshot: null,
-      hasCurrentVersion: false,
-    });
+    const blockers = evaluateApprovalReadiness({ snapshot: null, hasCurrentVersion: false });
     expect(blockers.length).toBeGreaterThan(0);
   });
 
   it("blocks approval when deliverables are empty", () => {
     const blockers = evaluateApprovalReadiness({
-      intake: completeIntake,
       snapshot: { ...completeSnapshot, content: { ...completeSnapshot.content, deliverables: [] } },
       hasCurrentVersion: true,
     });

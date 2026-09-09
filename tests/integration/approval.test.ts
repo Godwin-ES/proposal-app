@@ -88,11 +88,14 @@ describe.skipIf(!hasCredentials)("approval workflow (hosted Supabase integration
     return { proposalId: proposal.id, version };
   }
 
-  it("blocks submission when approval readiness fails (missing pricing)", async () => {
-    const { proposalId, version } = await generatedProposal({ estimated_pricing: "" });
+  it("blocks generation itself when a required intake field is missing (pricing)", async () => {
+    const proposal = await proposalsRepo.createProposal(salesClient, salesUser.userId, salesUser.fullName);
+    proposalIds.push(proposal.id);
+    await admin.from("proposals").update({ ...COMPLETE_INTAKE, estimated_pricing: "" }).eq("id", proposal.id);
+    mockGenerate.mockResolvedValueOnce(VALID_AI_RESULT);
 
     await expect(
-      submitProposalForApproval(salesClient, proposalId, version.id, salesUser)
+      generateInitialDraft(salesClient, proposal.id, "anthropic", salesUser)
     ).rejects.toMatchObject({ code: "READINESS_ERROR" });
   });
 

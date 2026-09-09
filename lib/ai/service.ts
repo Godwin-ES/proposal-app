@@ -78,7 +78,7 @@ export async function generateInitialDraft(
 
   const snapshot = composeInitialSnapshot(intake, aiResult.data);
   const contentHash = hashProposalSnapshot(snapshot);
-  const approvalBlockers = evaluateApprovalReadiness({ intake, snapshot, hasCurrentVersion: true });
+  const approvalBlockers = evaluateApprovalReadiness({ snapshot, hasCurrentVersion: true });
   const nextStatus = computeEditableStatus(approvalBlockers, aiResult.data.clarificationFlags);
 
   let version: VersionRow;
@@ -186,8 +186,7 @@ export async function regenerateSection(
     aiResult.data.content as never
   );
   const contentHash = hashProposalSnapshot(newSnapshot);
-  const intake = rowToIntake(proposal);
-  const approvalBlockers = evaluateApprovalReadiness({ intake, snapshot: newSnapshot, hasCurrentVersion: true });
+  const approvalBlockers = evaluateApprovalReadiness({ snapshot: newSnapshot, hasCurrentVersion: true });
   const nextStatus = computeEditableStatus(approvalBlockers, aiResult.data.clarificationFlags);
 
   let version: VersionRow;

@@ -4,7 +4,6 @@ import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import type { ProposalSnapshot } from "@/lib/domain/types";
 import { getProposalForOwner } from "@/lib/proposals/service";
-import { rowToIntake } from "@/lib/repositories/proposals";
 import { getVersion, listVersionsForProposal, createProposalVersion, type VersionRow } from "@/lib/repositories/versions";
 import { proposalSnapshotSchema } from "@/lib/domain/schemas";
 import { hashProposalSnapshot } from "@/lib/domain/hashing";
@@ -32,8 +31,7 @@ export async function saveManualRevision(
     );
   }
 
-  const intake = rowToIntake(proposal);
-  const approvalBlockers = evaluateApprovalReadiness({ intake, snapshot: parsed.data, hasCurrentVersion: true });
+  const approvalBlockers = evaluateApprovalReadiness({ snapshot: parsed.data, hasCurrentVersion: true });
   const nextStatus = computeEditableStatus(approvalBlockers, []);
   const contentHash = hashProposalSnapshot(parsed.data);
 

@@ -87,7 +87,6 @@ export default async function ProposalPage({
 
   const approvedVersionIds = new Set(approvals.filter((a) => a.decision === "approved").map((a) => a.version_id));
   const approvalBlockers = evaluateApprovalReadiness({
-    intake,
     snapshot: currentVersion.snapshot,
     hasCurrentVersion: true,
   });

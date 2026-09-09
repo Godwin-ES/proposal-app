@@ -9,24 +9,29 @@ export function evaluateGenerationReadiness(intake: ProposalIntake): string[] {
   if (isBlank(intake.clientName)) blockers.push("Client Name");
   if (isBlank(intake.companyName)) blockers.push("Company Name");
   if (isBlank(intake.salespersonName)) blockers.push("Salesperson Name");
+  if (isBlank(intake.dateOfCall)) blockers.push("Date of Call");
   if (isBlank(intake.clientNeedsSummary)) blockers.push("Summary of Client's Needs");
   if (isBlank(intake.projectScope)) blockers.push("Project Scope");
   if (isBlank(intake.goalsAndObjectives)) blockers.push("Goals and Objectives");
+  if (isBlank(intake.recommendedServices)) blockers.push("Recommended Services / Deliverables");
+  if (isBlank(intake.proposedTimeline)) blockers.push("Proposed Timeline");
+  if (isBlank(intake.estimatedPricing)) blockers.push("Estimated Pricing");
   return blockers;
 }
 
 export function evaluateApprovalReadiness(input: {
-  intake: ProposalIntake;
   snapshot: ProposalSnapshot | null;
   hasCurrentVersion: boolean;
 }): string[] {
-  const { intake, snapshot, hasCurrentVersion } = input;
+  const { snapshot, hasCurrentVersion } = input;
   const blockers: string[] = [];
 
-  if (isBlank(intake.dateOfCall)) blockers.push("Date of Call");
-  if (isBlank(intake.recommendedServices)) blockers.push("Recommended Services / Deliverables");
-  if (isBlank(intake.proposedTimeline)) blockers.push("Proposed Timeline");
-  if (isBlank(intake.estimatedPricing)) blockers.push("Estimated Pricing");
+  // Date of Call, Recommended Services, Proposed Timeline, and Estimated
+  // Pricing are no longer checked here: they're required for generation
+  // itself (evaluateGenerationReadiness) and intake fields are frozen the
+  // moment a version exists (see update_pre_generation_intake in
+  // supabase/migrations/003_week3_business_rpcs.sql), so they can never be
+  // blank by the time a version exists to approve.
 
   if (!hasCurrentVersion || !snapshot) {
     blockers.push("A generated proposal version");

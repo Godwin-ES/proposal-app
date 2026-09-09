@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { getProposalForOwner } from "@/lib/proposals/service";
-import { getProposal, rowToIntake } from "@/lib/repositories/proposals";
+import { getProposal } from "@/lib/repositories/proposals";
 import { getVersion } from "@/lib/repositories/versions";
 import * as approvalsRepo from "@/lib/repositories/approvals";
 import * as proposalsRepo from "@/lib/repositories/proposals";
@@ -34,8 +34,7 @@ export async function submitProposalForApproval(
   }
 
   const version = await getVersion(supabase, proposal.current_version_id);
-  const intake = rowToIntake(proposal);
-  const approvalBlockers = evaluateApprovalReadiness({ intake, snapshot: version.snapshot, hasCurrentVersion: true });
+  const approvalBlockers = evaluateApprovalReadiness({ snapshot: version.snapshot, hasCurrentVersion: true });
   if (approvalBlockers.length > 0) {
     throw new DomainError(
       "READINESS_ERROR",

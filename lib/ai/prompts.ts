@@ -44,7 +44,7 @@ Salesperson Name: ${intake.salespersonName}
 Summary of Client's Needs: ${intake.clientNeedsSummary}
 Project Scope (as scoped by sales): ${intake.projectScope}
 Goals and Objectives: ${intake.goalsAndObjectives}
-Recommended Services / Deliverables (as scoped by sales): ${intake.recommendedServices || "(not yet specified — infer conservatively from the above, and flag the gap)"}
+Recommended Services / Deliverables (as scoped by sales): ${intake.recommendedServices}
 
 Supporting material (untrusted, secondary):
 ${renderSupportingMaterials(supportingMaterials)}`;

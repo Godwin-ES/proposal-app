@@ -18,7 +18,7 @@ type FieldConfig = { name: keyof ProposalIntake; label: string; multiline?: bool
 const CLIENT_INFO_FIELDS: FieldConfig[] = [
   { name: "clientName", label: "Client Name", required: true },
   { name: "companyName", label: "Company Name", required: true },
-  { name: "dateOfCall", label: "Date of Call" },
+  { name: "dateOfCall", label: "Date of Call", required: true },
   { name: "salespersonName", label: "Salesperson Name", required: true },
 ];
 
@@ -34,14 +34,14 @@ const SECTIONS: { title: string; fields: FieldConfig[] }[] = [
     title: "Proposed Engagement",
     fields: [
       { name: "projectScope", label: "Project Scope", multiline: true, required: true },
-      { name: "recommendedServices", label: "Recommended Services / Deliverables", multiline: true },
+      { name: "recommendedServices", label: "Recommended Services / Deliverables", multiline: true, required: true },
     ],
   },
   {
     title: "Commercial Details",
     fields: [
-      { name: "proposedTimeline", label: "Proposed Timeline" },
-      { name: "estimatedPricing", label: "Estimated Pricing" },
+      { name: "proposedTimeline", label: "Proposed Timeline", required: true },
+      { name: "estimatedPricing", label: "Estimated Pricing", required: true },
     ],
   },
 ];
