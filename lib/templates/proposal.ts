@@ -20,7 +20,7 @@ export function buildTimelineIntro(): string {
 }
 
 export function buildTimelineOutro(): string {
-  return "This estimate covers implementation, testing, and iteration based on your feedback.";
+  return "Covers implementation, testing, and iteration based on your feedback.";
 }
 
 export function buildPricingIntro(): string {
@@ -28,7 +28,7 @@ export function buildPricingIntro(): string {
 }
 
 export function buildPricingOutro(): string {
-  return "Should your needs evolve during the engagement, we'll work with you to adjust scope and pricing accordingly.";
+  return "Scope and pricing can be adjusted as your needs evolve.";
 }
 
 export function buildNextSteps(): string {
