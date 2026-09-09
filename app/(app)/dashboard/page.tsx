@@ -3,8 +3,7 @@ import { requireSalesperson } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listMyProposals } from "@/lib/proposals/service";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusSummary } from "@/components/dashboard/status-summary";
-import { RecentProposals } from "@/components/dashboard/recent-proposals";
+import { ProposalStatusTabs } from "@/components/dashboard/proposal-status-tabs";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -26,8 +25,7 @@ export default async function DashboardPage() {
           </Button>
         }
       />
-      <StatusSummary statuses={proposals.map((p) => p.status)} />
-      <RecentProposals proposals={proposals} />
+      <ProposalStatusTabs proposals={proposals} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
+import { formatDateTime } from "@/lib/format";
 
 export type ApprovalQueueRow = {
   proposalId: string;
@@ -47,7 +48,7 @@ export function ApprovalQueue({ rows }: { rows: ApprovalQueueRow[] }) {
               <TableCell>{row.salespersonName || "—"}</TableCell>
               <TableCell>v{row.versionNumber}</TableCell>
               <TableCell className="text-muted-foreground">
-                {row.submittedAt ? new Date(row.submittedAt).toLocaleString() : "—"}
+                {row.submittedAt ? formatDateTime(row.submittedAt) : "—"}
               </TableCell>
             </TableRow>
           ))}

@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EmptyState } from "@/components/shared/empty-state";
 import { History } from "lucide-react";
 import type { DeliveryStatus } from "@/lib/domain/types";
+import { formatDateTime } from "@/lib/format";
 
 export type DeliveryHistoryEntry = {
   id: string;
@@ -44,7 +45,7 @@ export function DeliveryHistory({ attempts }: { attempts: DeliveryHistoryEntry[]
                 </Badge>
               </TableCell>
               <TableCell>{a.recipient}</TableCell>
-              <TableCell className="text-muted-foreground">{new Date(a.createdAt).toLocaleString()}</TableCell>
+              <TableCell className="text-muted-foreground">{formatDateTime(a.createdAt)}</TableCell>
               <TableCell className="max-w-xs truncate text-muted-foreground">{a.error ?? "—"}</TableCell>
             </TableRow>
           ))}

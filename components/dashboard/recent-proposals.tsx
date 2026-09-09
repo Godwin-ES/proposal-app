@@ -7,9 +7,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FileText } from "lucide-react";
+import { formatDateTime } from "@/lib/format";
 import type { ProposalRow } from "@/lib/repositories/proposals";
 
-export function RecentProposals({ proposals }: { proposals: ProposalRow[] }) {
+export function RecentProposals({
+  proposals,
+  emptyTitle = "No proposals here",
+  emptyDescription,
+}: {
+  proposals: ProposalRow[];
+  emptyTitle?: string;
+  emptyDescription?: string;
+}) {
   const [query, setQuery] = useState("");
 
   const filtered = proposals.filter((p) => {
@@ -18,13 +27,7 @@ export function RecentProposals({ proposals }: { proposals: ProposalRow[] }) {
   });
 
   if (proposals.length === 0) {
-    return (
-      <EmptyState
-        icon={FileText}
-        title="No proposals yet"
-        description="Create your first proposal to get started."
-      />
-    );
+    return <EmptyState icon={FileText} title={emptyTitle} description={emptyDescription} />;
   }
 
   return (
@@ -57,9 +60,7 @@ export function RecentProposals({ proposals }: { proposals: ProposalRow[] }) {
                 <TableCell>
                   <StatusBadge status={p.status} />
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {new Date(p.updated_at).toLocaleDateString()}
-                </TableCell>
+                <TableCell className="text-muted-foreground">{formatDateTime(p.updated_at)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

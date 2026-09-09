@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ProposalSectionCard } from "@/components/proposals/proposal-section-card";
 import { ApprovalDecisionPanel } from "@/components/approvals/approval-decision-panel";
 import { Badge } from "@/components/ui/badge";
+import { formatDateTime } from "@/lib/format";
 import { DomainError } from "@/lib/domain/errors";
 
 export default async function ApprovalReviewPage({
@@ -38,7 +39,7 @@ export default async function ApprovalReviewPage({
 
       <p className="text-sm text-muted-foreground">
         Submitted by {proposal.salesperson_name} on{" "}
-        {proposal.approval_submitted_at ? new Date(proposal.approval_submitted_at).toLocaleString() : "—"}. This
+        {proposal.approval_submitted_at ? formatDateTime(proposal.approval_submitted_at) : "—"}. This
         review is read-only.
       </p>
 
