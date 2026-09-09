@@ -111,13 +111,19 @@ export function ProposalWorkspace({
           <p className="mt-1 text-amber-800 dark:text-amber-300">
             {changeRequest.comments ? `“${changeRequest.comments}”` : "No additional comments were left."}
           </p>
-          <p className="mt-2 text-amber-800 dark:text-amber-300">
-            Make at least one revision below before resubmitting — an identical resubmission is blocked.
-          </p>
         </div>
       ) : null}
 
-      <ReadinessPanel title="Approval readiness" blockers={editable ? approvalBlockers : []} />
+      <ReadinessPanel
+        title="Approval readiness"
+        blockers={
+          editable
+            ? changeRequest
+              ? ["Revise this version based on the approver's notes above", ...approvalBlockers]
+              : approvalBlockers
+            : []
+        }
+      />
 
       {status === "approved" || status === "delivered" ? (
         <div>
