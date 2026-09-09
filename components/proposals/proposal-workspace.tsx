@@ -10,6 +10,7 @@ import { ProposalHeader } from "@/components/proposals/proposal-header";
 import { LocalDateTime } from "@/components/shared/local-datetime";
 import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { ProposalSectionCard } from "@/components/proposals/proposal-section-card";
+import { InlineSectionCard } from "@/components/proposals/inline-section-card";
 import { ProposalEditorDialog } from "@/components/proposals/proposal-editor-dialog";
 import { ProposalDetailsEditor } from "@/components/proposals/proposal-details-editor";
 import { RegenerateSectionDialog } from "@/components/proposals/regenerate-section-dialog";
@@ -185,119 +186,91 @@ export function ProposalWorkspace({
         ) : null}
       </div>
 
-      <ProposalSectionCard
+      <InlineSectionCard
         title="Introduction"
-        content={snapshot.content.introduction}
-        actions={
-          editable ? (
-            <div className="flex items-center gap-1">
-              <ProposalEditorDialog
-                trigger={editButton("Introduction")}
-                title="Edit Introduction"
-                initialValue={snapshot.content.introduction}
-                onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, introduction: value } })}
-              />
-              <RegenerateSectionDialog
-                proposalId={proposalId}
-                versionId={versionId}
-                targetSection="introduction"
-                sectionLabel="Introduction"
-                materialCount={materialCount}
-              />
-            </div>
-          ) : null
+        value={snapshot.content.introduction}
+        displayContent={snapshot.content.introduction}
+        editable={editable}
+        onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, introduction: value } })}
+        extraActions={
+          <RegenerateSectionDialog
+            proposalId={proposalId}
+            versionId={versionId}
+            targetSection="introduction"
+            sectionLabel="Introduction"
+            materialCount={materialCount}
+          />
         }
       />
 
-      <ProposalSectionCard
+      <InlineSectionCard
         title="Project Scope"
-        content={snapshot.content.projectScope}
-        actions={
-          editable ? (
-            <div className="flex items-center gap-1">
-              <ProposalEditorDialog
-                trigger={editButton("Project Scope")}
-                title="Edit Project Scope"
-                initialValue={snapshot.content.projectScope}
-                onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, projectScope: value } })}
-              />
-              <RegenerateSectionDialog
-                proposalId={proposalId}
-                versionId={versionId}
-                targetSection="projectScope"
-                sectionLabel="Project Scope"
-                materialCount={materialCount}
-              />
-            </div>
-          ) : null
+        value={snapshot.content.projectScope}
+        displayContent={snapshot.content.projectScope}
+        editable={editable}
+        onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, projectScope: value } })}
+        extraActions={
+          <RegenerateSectionDialog
+            proposalId={proposalId}
+            versionId={versionId}
+            targetSection="projectScope"
+            sectionLabel="Project Scope"
+            materialCount={materialCount}
+          />
         }
       />
 
-      <ProposalSectionCard
+      <InlineSectionCard
         title="Recommended Approach"
-        content={snapshot.content.recommendedApproach}
-        actions={
-          editable ? (
-            <div className="flex items-center gap-1">
-              <ProposalEditorDialog
-                trigger={editButton("Recommended Approach")}
-                title="Edit Recommended Approach"
-                initialValue={snapshot.content.recommendedApproach}
-                onSave={(value) =>
-                  saveSnapshot({ ...snapshot, content: { ...snapshot.content, recommendedApproach: value } })
-                }
-              />
-              <RegenerateSectionDialog
-                proposalId={proposalId}
-                versionId={versionId}
-                targetSection="recommendedApproach"
-                sectionLabel="Recommended Approach"
-                materialCount={materialCount}
-              />
-            </div>
-          ) : null
+        value={snapshot.content.recommendedApproach}
+        displayContent={snapshot.content.recommendedApproach}
+        editable={editable}
+        onSave={(value) =>
+          saveSnapshot({ ...snapshot, content: { ...snapshot.content, recommendedApproach: value } })
+        }
+        extraActions={
+          <RegenerateSectionDialog
+            proposalId={proposalId}
+            versionId={versionId}
+            targetSection="recommendedApproach"
+            sectionLabel="Recommended Approach"
+            materialCount={materialCount}
+          />
         }
       />
 
-      <ProposalSectionCard
+      <InlineSectionCard
         title="Deliverables"
-        content={
+        value={snapshot.content.deliverables.join("\n")}
+        displayContent={
           <ul className="list-disc pl-5">
             {snapshot.content.deliverables.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         }
-        actions={
-          editable ? (
-            <div className="flex items-center gap-1">
-              <ProposalEditorDialog
-                trigger={editButton("Deliverables")}
-                title="Edit Deliverables"
-                description="One deliverable per line."
-                initialValue={snapshot.content.deliverables.join("\n")}
-                onSave={(value) =>
-                  saveSnapshot({
-                    ...snapshot,
-                    content: {
-                      ...snapshot.content,
-                      deliverables: value
-                        .split("\n")
-                        .map((line) => line.trim())
-                        .filter(Boolean),
-                    },
-                  })
-                }
-              />
-              <RegenerateSectionDialog
-                proposalId={proposalId}
-                versionId={versionId}
-                targetSection="deliverables"
-                sectionLabel="Deliverables"
-                materialCount={materialCount}
-              />
-            </div>
-          ) : null
+        description="One deliverable per line."
+        editable={editable}
+        onSave={(value) =>
+          saveSnapshot({
+            ...snapshot,
+            content: {
+              ...snapshot.content,
+              deliverables: value
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean),
+            },
+          })
+        }
+        extraActions={
+          <RegenerateSectionDialog
+            proposalId={proposalId}
+            versionId={versionId}
+            targetSection="deliverables"
+            sectionLabel="Deliverables"
+            materialCount={materialCount}
+          />
         }
       />
 
@@ -334,19 +307,12 @@ export function ProposalWorkspace({
         />
       </div>
 
-      <ProposalSectionCard
+      <InlineSectionCard
         title="Next Steps"
-        content={snapshot.content.nextSteps}
-        actions={
-          editable ? (
-            <ProposalEditorDialog
-              trigger={editButton("Next Steps")}
-              title="Edit Next Steps"
-              initialValue={snapshot.content.nextSteps}
-              onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, nextSteps: value } })}
-            />
-          ) : null
-        }
+        value={snapshot.content.nextSteps}
+        displayContent={snapshot.content.nextSteps}
+        editable={editable}
+        onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, nextSteps: value } })}
       />
 
       <div>

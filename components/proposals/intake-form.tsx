@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimelineInput } from "@/components/shared/timeline-input";
 import { PricingInput } from "@/components/shared/pricing-input";
+import { formatTimeline, formatPricing } from "@/lib/domain/quantity-fields";
 
 type FieldConfig = {
   name: keyof ProposalIntake;
@@ -74,7 +75,16 @@ export function IntakeForm({
     formState: { errors, isDirty },
   } = useForm<ProposalIntake>({
     resolver: zodResolver(proposalIntakeSchema),
-    defaultValues,
+    // TimelineInput/PricingInput always *display* a real default (1 week /
+    // $0) even when the underlying field is blank, so the form's actual
+    // default must match that display from the first render — otherwise the
+    // displayed value and the saved value silently disagree until the user
+    // happens to touch the stepper.
+    defaultValues: {
+      ...defaultValues,
+      proposedTimeline: defaultValues.proposedTimeline || formatTimeline(1, "weeks"),
+      estimatedPricing: defaultValues.estimatedPricing || formatPricing(0),
+    },
   });
 
   function onSubmit(values: ProposalIntake) {
