@@ -15,24 +15,34 @@ const MUTED = "#5f5f5f";
 const RULE = "#dcdcdc";
 const ACCENT = "#111111";
 
+// One shared line-height for every piece of running text (paragraphs, list
+// items, framing sentences, highlight-card copy) so the vertical rhythm
+// never varies by section — this was the specific defect being fixed here.
+const LINE_HEIGHT = 1.5;
+const BODY_SIZE = 10.5;
+
 const styles = StyleSheet.create({
-  page: { paddingTop: 0, paddingBottom: 64, paddingHorizontal: 48, fontSize: 10.5, fontFamily: "Helvetica", color: INK },
+  page: { paddingTop: 0, paddingBottom: 64, paddingHorizontal: 48, fontSize: BODY_SIZE, fontFamily: "Helvetica", color: INK },
   accentBar: { height: 6, backgroundColor: ACCENT, marginBottom: 32, marginHorizontal: -48 },
   title: { fontSize: 22, fontWeight: 700, marginBottom: 10, color: INK },
   metaRow: { flexDirection: "row", flexWrap: "wrap", columnGap: 14, marginBottom: 14 },
   metaItem: { fontSize: 9.5, color: MUTED },
   metaLabel: { color: MUTED },
   headerRule: { borderBottomWidth: 1, borderBottomColor: RULE, marginBottom: 22 },
-  section: { marginBottom: 20 },
+
+  section: { marginBottom: 22 },
   sectionHeading: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   sectionNumber: { fontSize: 10, fontWeight: 700, color: MUTED, width: 22 },
   sectionTitle: { fontSize: 13, fontWeight: 700, color: INK },
-  subheading: { fontSize: 10.5, fontWeight: 700, color: INK, marginTop: 10, marginBottom: 4 },
-  body: { lineHeight: 1.55, color: INK },
-  frame: { lineHeight: 1.5, color: MUTED, marginBottom: 6 },
-  deliverableRow: { flexDirection: "row", marginBottom: 6, paddingLeft: 4 },
-  bullet: { width: 14, color: MUTED },
-  deliverableText: { flex: 1, lineHeight: 1.5 },
+  subheading: { fontSize: BODY_SIZE, fontWeight: 700, color: INK, marginTop: 10, marginBottom: 6 },
+
+  body: { fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: INK },
+  frame: { fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: MUTED, marginBottom: 8 },
+
+  deliverableRow: { flexDirection: "row", marginBottom: 8 },
+  bullet: { width: 14, fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: MUTED },
+  deliverableText: { flex: 1, fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: INK },
+
   highlightBox: {
     flexDirection: "row",
     borderWidth: 1,
@@ -42,9 +52,12 @@ const styles = StyleSheet.create({
   },
   highlightCell: { flex: 1, padding: 14 },
   highlightDivider: { width: 1, backgroundColor: RULE },
-  highlightFrame: { fontSize: 9.5, lineHeight: 1.4, color: MUTED, marginBottom: 6 },
-  highlightValue: { fontSize: 13, fontWeight: 700, color: INK, marginBottom: 6 },
+  highlightFrame: { fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: MUTED, marginBottom: 8 },
+  highlightValue: { fontSize: 13, fontWeight: 700, color: INK, marginBottom: 8 },
+
   signatureBlock: { marginTop: 8 },
+  signatureLine: { fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: INK, marginBottom: 2 },
+
   footer: {
     position: "absolute",
     bottom: 28,
@@ -110,8 +123,8 @@ export function ProposalDocument({ snapshot }: { snapshot: ProposalSnapshot }) {
           <Text style={styles.frame}>{buildDeliverablesIntro()}</Text>
           {content.deliverables.map((item, i) => (
             <View key={i} style={styles.deliverableRow} wrap={false}>
-              <Text style={styles.bullet}>—</Text>
-              <Text style={[styles.body, styles.deliverableText]}>{item}</Text>
+              <Text style={styles.bullet}>•</Text>
+              <Text style={styles.deliverableText}>{item}</Text>
             </View>
           ))}
         </View>
@@ -140,9 +153,9 @@ export function ProposalDocument({ snapshot }: { snapshot: ProposalSnapshot }) {
         </View>
 
         <View style={[styles.section, styles.signatureBlock]} wrap={false}>
-          <Text style={styles.body}>Warm regards,</Text>
-          <Text style={[styles.body, { fontWeight: 700 }]}>{client.salespersonName}</Text>
-          <Text style={styles.body}>Koya Talent</Text>
+          <Text style={styles.signatureLine}>Warm regards,</Text>
+          <Text style={[styles.signatureLine, { fontWeight: 700 }]}>{client.salespersonName}</Text>
+          <Text style={styles.signatureLine}>Koya Talent</Text>
         </View>
 
         <View style={styles.footer} fixed>
