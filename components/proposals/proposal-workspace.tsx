@@ -13,6 +13,8 @@ import { ProposalSectionCard } from "@/components/proposals/proposal-section-car
 import { ProposalEditorDialog } from "@/components/proposals/proposal-editor-dialog";
 import { ProposalDetailsEditor } from "@/components/proposals/proposal-details-editor";
 import { RegenerateSectionDialog } from "@/components/proposals/regenerate-section-dialog";
+import { TimelineInput } from "@/components/shared/timeline-input";
+import { PricingInput } from "@/components/shared/pricing-input";
 import { VersionHistory, type VersionHistoryEntry } from "@/components/proposals/version-history";
 import { Button } from "@/components/ui/button";
 import {
@@ -308,8 +310,8 @@ export function ProposalWorkspace({
               <ProposalEditorDialog
                 trigger={editButton("Timeline")}
                 title="Edit Timeline"
-                multiline={false}
                 initialValue={snapshot.content.timeline}
+                renderInput={(value, onChange) => <TimelineInput value={value} onChange={onChange} />}
                 onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, timeline: value } })}
               />
             ) : null
@@ -323,8 +325,8 @@ export function ProposalWorkspace({
               <ProposalEditorDialog
                 trigger={editButton("Pricing")}
                 title="Edit Pricing"
-                multiline={false}
                 initialValue={snapshot.content.pricing}
+                renderInput={(value, onChange) => <PricingInput value={value} onChange={onChange} />}
                 onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, pricing: value } })}
               />
             ) : null

@@ -20,6 +20,7 @@ export function ProposalEditorDialog({
   description,
   initialValue,
   multiline = true,
+  renderInput,
   onSave,
 }: {
   trigger: ReactNode;
@@ -27,6 +28,8 @@ export function ProposalEditorDialog({
   description?: string;
   initialValue: string;
   multiline?: boolean;
+  /** Overrides the default Textarea/input with a custom controlled input (e.g. TimelineInput/PricingInput). */
+  renderInput?: (value: string, onChange: (value: string) => void) => ReactNode;
   onSave: (value: string) => Promise<boolean>;
 }) {
   const [open, setOpen] = useState(false);
@@ -54,7 +57,9 @@ export function ProposalEditorDialog({
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        {multiline ? (
+        {renderInput ? (
+          renderInput(value, setValue)
+        ) : multiline ? (
           <Textarea rows={8} value={value} onChange={(e) => setValue(e.target.value)} />
         ) : (
           <input

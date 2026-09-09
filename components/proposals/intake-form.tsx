@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { updateIntakeAction, updateClientEmailAction } from "@/actions/proposals";
@@ -12,8 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TimelineInput } from "@/components/shared/timeline-input";
+import { PricingInput } from "@/components/shared/pricing-input";
 
-type FieldConfig = { name: keyof ProposalIntake; label: string; multiline?: boolean; required?: boolean };
+type FieldConfig = {
+  name: keyof ProposalIntake;
+  label: string;
+  multiline?: boolean;
+  required?: boolean;
+  kind?: "timeline" | "pricing";
+};
 
 const CLIENT_INFO_FIELDS: FieldConfig[] = [
   { name: "clientName", label: "Client Name", required: true },
@@ -40,8 +48,8 @@ const SECTIONS: { title: string; fields: FieldConfig[] }[] = [
   {
     title: "Commercial Details",
     fields: [
-      { name: "proposedTimeline", label: "Proposed Timeline", required: true },
-      { name: "estimatedPricing", label: "Estimated Pricing", required: true },
+      { name: "proposedTimeline", label: "Proposed Timeline", required: true, kind: "timeline" },
+      { name: "estimatedPricing", label: "Estimated Pricing", required: true, kind: "pricing" },
     ],
   },
 ];
@@ -61,6 +69,7 @@ export function IntakeForm({
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isDirty },
   } = useForm<ProposalIntake>({
@@ -97,7 +106,19 @@ export function IntakeForm({
           {field.label}
           {field.required ? <span className="text-destructive"> *</span> : null}
         </Label>
-        {field.multiline ? (
+        {field.kind === "timeline" || field.kind === "pricing" ? (
+          <Controller
+            name={field.name}
+            control={control}
+            render={({ field: { value, onChange } }) =>
+              field.kind === "timeline" ? (
+                <TimelineInput value={value} onChange={onChange} disabled={!editable} />
+              ) : (
+                <PricingInput value={value} onChange={onChange} disabled={!editable} />
+              )
+            }
+          />
+        ) : field.multiline ? (
           <Textarea id={field.name} disabled={!editable} rows={4} {...register(field.name)} />
         ) : (
           <Input id={field.name} disabled={!editable} {...register(field.name)} />
