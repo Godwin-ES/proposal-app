@@ -38,7 +38,7 @@ export function parseTimeline(value: string): { amount: number; unit: TimelineUn
     const unit = TIMELINE_UNIT_ALIASES[match[2].toLowerCase()];
     if (unit && Number.isFinite(amount)) return { amount, unit };
   }
-  return { amount: 1, unit: "weeks" };
+  return { amount: 0, unit: "weeks" };
 }
 
 export function formatPricing(amount: number): string {

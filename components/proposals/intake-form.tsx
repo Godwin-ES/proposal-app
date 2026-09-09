@@ -82,7 +82,7 @@ export function IntakeForm({
     // happens to touch the stepper.
     defaultValues: {
       ...defaultValues,
-      proposedTimeline: defaultValues.proposedTimeline || formatTimeline(1, "weeks"),
+      proposedTimeline: defaultValues.proposedTimeline || formatTimeline(0, "weeks"),
       estimatedPricing: defaultValues.estimatedPricing || formatPricing(0),
     },
   });

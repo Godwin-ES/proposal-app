@@ -23,8 +23,8 @@ describe("formatTimeline / parseTimeline", () => {
   });
 
   it("falls back to a sane default for unparseable input", () => {
-    expect(parseTimeline("")).toEqual({ amount: 1, unit: "weeks" });
-    expect(parseTimeline("sometime soon")).toEqual({ amount: 1, unit: "weeks" });
+    expect(parseTimeline("")).toEqual({ amount: 0, unit: "weeks" });
+    expect(parseTimeline("sometime soon")).toEqual({ amount: 0, unit: "weeks" });
   });
 
   it("round-trips format -> parse -> format", () => {
