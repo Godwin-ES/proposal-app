@@ -48,7 +48,10 @@ const TABS: TabConfig[] = [
 export function ProposalStatusTabs({ proposals }: { proposals: ProposalRow[] }) {
   return (
     <Tabs defaultValue="in-progress" className="gap-4">
-      <TabsList variant="line" className="h-auto w-full justify-start gap-6 rounded-none border-b p-0">
+      <TabsList
+        variant="line"
+        className="grid h-auto w-full grid-cols-2 gap-0 rounded-none border-b bg-transparent p-0 sm:grid-cols-4"
+      >
         {TABS.map((tab) => {
           const count = proposals.filter((p) => tab.statuses.includes(p.status)).length;
           return (
@@ -56,8 +59,8 @@ export function ProposalStatusTabs({ proposals }: { proposals: ProposalRow[] }) 
               key={tab.key}
               value={tab.key}
               className={cn(
-                "group h-auto flex-none flex-col items-start gap-1.5 rounded-none border-0 border-b-2 border-transparent",
-                "bg-transparent px-1 pt-1 pb-3 text-left shadow-none after:hidden",
+                "group h-auto w-full flex-none flex-col items-start gap-1.5 rounded-none border-0 border-b-2 border-transparent",
+                "bg-transparent px-3 pt-1 pb-3 text-left shadow-none after:hidden",
                 "data-active:bg-transparent data-active:border-b-foreground data-active:shadow-none"
               )}
             >
