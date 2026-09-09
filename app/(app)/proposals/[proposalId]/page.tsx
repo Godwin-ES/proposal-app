@@ -115,7 +115,7 @@ export default async function ProposalPage({
       changeRequest={changeRequest ? { comments: changeRequest.comments, createdAt: changeRequest.created_at } : null}
       editable={isVersionWritableStatus(proposal.status)}
       materialCount={materials.filter((m) => m.extraction_status === "ready").length}
-      canSubmitForApproval={isEditableStatus(proposal.status) && approvalBlockers.length === 0}
+      canSubmitForApproval={isEditableStatus(proposal.status) && approvalBlockers.length === 0 && !changeRequest}
       versions={versions.map((v) => ({
         id: v.id,
         versionNumber: v.version_number,

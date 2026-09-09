@@ -167,6 +167,33 @@ describe.skipIf(!hasCredentials)("approval workflow (hosted Supabase integration
     expect(v2.version_number).toBe(2);
   });
 
+  it("blocks resubmitting the exact version an approver already sent back, but allows it after a revision", async () => {
+    const { proposalId, version } = await generatedProposal();
+    await submitProposalForApproval(salesClient, proposalId, version.id, salesUser);
+    await decideProposalApproval(approverClient, {
+      proposalId,
+      versionId: version.id,
+      decision: "changes_requested",
+      comments: "Please adjust the timeline.",
+    });
+
+    // Resubmitting the identical, unrevised version is rejected.
+    await expect(
+      submitProposalForApproval(salesClient, proposalId, version.id, salesUser)
+    ).rejects.toMatchObject({ code: "READINESS_ERROR" });
+
+    const { data: stillChangesRequested } = await admin.from("proposals").select("status").eq("id", proposalId).single();
+    expect(stillChangesRequested?.status).toBe("changes_requested");
+
+    // Once revised, resubmission is allowed again.
+    const revised = { ...version.snapshot, content: { ...version.snapshot.content, timeline: "10 weeks" } };
+    const v2 = await saveManualRevision(salesClient, proposalId, version.id, revised, salesUser);
+    await submitProposalForApproval(salesClient, proposalId, v2.id, salesUser);
+
+    const { data: pendingAgain } = await admin.from("proposals").select("status").eq("id", proposalId).single();
+    expect(pendingAgain?.status).toBe("pending_approval");
+  });
+
   it("rejects a decision against a stale (non-current) version", async () => {
     const { proposalId, version } = await generatedProposal();
     await submitProposalForApproval(salesClient, proposalId, version.id, salesUser);
