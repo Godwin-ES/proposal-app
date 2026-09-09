@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ProposalSectionCard } from "@/components/proposals/proposal-section-card";
 import { ApprovalDecisionPanel } from "@/components/approvals/approval-decision-panel";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime } from "@/lib/format";
+import { LocalDateTime } from "@/components/shared/local-datetime";
 import { DomainError } from "@/lib/domain/errors";
 
 export default async function ApprovalReviewPage({
@@ -41,7 +41,7 @@ export default async function ApprovalReviewPage({
 
       <p className="text-sm text-muted-foreground">
         Submitted by {proposal.salesperson_name} on{" "}
-        {proposal.approval_submitted_at ? formatDateTime(proposal.approval_submitted_at) : "—"}. This
+        {proposal.approval_submitted_at ? <LocalDateTime value={proposal.approval_submitted_at} /> : "—"}. This
         review is read-only.
       </p>
 
@@ -49,7 +49,7 @@ export default async function ApprovalReviewPage({
         <div className="rounded-md border bg-muted/40 p-4 text-sm">
           <p className="font-medium">
             {latestDecision.decision === "approved" ? "Approved" : "Changes requested"} on{" "}
-            {formatDateTime(latestDecision.created_at)}
+            <LocalDateTime value={latestDecision.created_at} />
           </p>
           {latestDecision.comments ? (
             <p className="mt-1 text-muted-foreground">&ldquo;{latestDecision.comments}&rdquo;</p>

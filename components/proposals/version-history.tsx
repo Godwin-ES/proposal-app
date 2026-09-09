@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { buildProposalText } from "@/lib/templates/proposal";
-import { formatDateTime } from "@/lib/format";
+import { LocalDateTime } from "@/components/shared/local-datetime";
 import type { ProposalChangeType, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
 
 export type VersionHistoryEntry = {
@@ -47,7 +47,9 @@ export function VersionHistory({ versions }: { versions: VersionHistoryEntry[] }
             {versions.map((v) => (
               <TableRow key={v.id}>
                 <TableCell className="font-medium">v{v.versionNumber}</TableCell>
-                <TableCell className="text-muted-foreground">{formatDateTime(v.createdAt)}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  <LocalDateTime value={v.createdAt} />
+                </TableCell>
                 <TableCell>{CHANGE_TYPE_LABELS[v.changeType]}</TableCell>
                 <TableCell className="text-muted-foreground">{v.changedSection ?? "—"}</TableCell>
                 <TableCell className="flex flex-wrap gap-1">

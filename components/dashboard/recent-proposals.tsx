@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { formatDateTime } from "@/lib/format";
+import { LocalDateTime } from "@/components/shared/local-datetime";
 import { deleteProposalAction } from "@/actions/proposals";
 import type { ProposalRow } from "@/lib/repositories/proposals";
 
@@ -128,7 +128,9 @@ export function RecentProposals({
                 <TableCell>
                   <StatusBadge status={p.status} />
                 </TableCell>
-                <TableCell className="text-muted-foreground">{formatDateTime(p.updated_at)}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  <LocalDateTime value={p.updated_at} />
+                </TableCell>
                 <TableCell>{DELETABLE_STATUSES.has(p.status) ? <DeleteProposalButton proposal={p} /> : null}</TableCell>
               </TableRow>
             ))}

@@ -1,5 +1,5 @@
 import { StatusBadge } from "@/components/shared/status-badge";
-import { formatDateTime } from "@/lib/format";
+import { LocalDateTime } from "@/components/shared/local-datetime";
 import type { ProposalStatus } from "@/lib/domain/types";
 
 export function ProposalHeader({
@@ -27,7 +27,9 @@ export function ProposalHeader({
         <StatusBadge status={status} />
         <span>Version {versionNumber}</span>
         <span>Owner: {ownerName}</span>
-        <span>Updated {formatDateTime(updatedAt)}</span>
+        <span>
+          Updated <LocalDateTime value={updatedAt} />
+        </span>
       </div>
     </div>
   );
