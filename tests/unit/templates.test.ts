@@ -42,6 +42,14 @@ describe("proposal template", () => {
     expect(text).toContain("Onboarding portal");
   });
 
+  it("frames deliverables, timeline, and pricing with deterministic lead-in copy, not just a bare label and value", () => {
+    const text = buildProposalText(snapshot);
+    expect(text).toContain("This engagement includes the following key deliverables:");
+    expect(text).toContain("This engagement is estimated to be completed within:");
+    expect(text).toContain("The estimated investment for this engagement is:");
+    expect(text).toContain("Here is a high-level overview of what we are proposing for Jane Doe.");
+  });
+
   it("builds deterministic non-empty next steps copy", () => {
     expect(buildNextSteps().length).toBeGreaterThan(0);
   });
