@@ -17,11 +17,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deleteProposalAction } from "@/actions/proposals";
-
-/** Only draft/needs_clarification proposals are deletable — a
- * changes_requested proposal already has an approver decision recorded and
- * deleting it would erase that audit trail (see lib/proposals/service.ts). */
-export const DELETABLE_STATUSES = new Set(["draft", "needs_clarification"]);
+// DELETABLE_STATUSES lives in lib/domain/types.ts, not here — this file is
+// "use client", and a Server Component importing a non-component export
+// across a "use client" boundary gets an opaque client reference in
+// production builds, not the real value (dev mode tolerates it, which is
+// why that only broke in production). Import it from lib/domain/types
+// directly wherever it's needed, not through this component.
 
 export function DeleteProposalButton({
   proposalId,

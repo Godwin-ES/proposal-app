@@ -14,6 +14,11 @@ export const EDITABLE_STATUSES: ProposalStatus[] = [
   "changes_requested",
 ];
 
+/** Only draft/needs_clarification proposals are deletable — a
+ * changes_requested proposal already has an approver decision recorded and
+ * deleting it would erase that audit trail (see lib/proposals/service.ts). */
+export const DELETABLE_STATUSES: ProposalStatus[] = ["draft", "needs_clarification"];
+
 export type ProposalChangeType =
   | "initial_generation"
   | "manual_edit"

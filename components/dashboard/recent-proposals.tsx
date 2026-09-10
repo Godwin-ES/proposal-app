@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LocalDateTime } from "@/components/shared/local-datetime";
-import { DeleteProposalButton, DELETABLE_STATUSES } from "@/components/proposals/delete-proposal-button";
+import { DeleteProposalButton } from "@/components/proposals/delete-proposal-button";
+import { DELETABLE_STATUSES } from "@/lib/domain/types";
 import type { ProposalRow } from "@/lib/repositories/proposals";
 
 export function RecentProposals({
@@ -66,7 +67,7 @@ export function RecentProposals({
                   <LocalDateTime value={p.updated_at} />
                 </TableCell>
                 <TableCell>
-                  {DELETABLE_STATUSES.has(p.status) ? (
+                  {DELETABLE_STATUSES.includes(p.status) ? (
                     <DeleteProposalButton
                       proposalId={p.id}
                       clientLabel={`${p.client_name || "this proposal"}${p.company_name ? ` (${p.company_name})` : ""}`}

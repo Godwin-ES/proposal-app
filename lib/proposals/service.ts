@@ -6,14 +6,8 @@ import { proposalIntakeSchema, clientEmailSchema } from "@/lib/domain/schemas";
 import { DomainError } from "@/lib/domain/errors";
 import { removeProposalStorage } from "@/lib/storage/cleanup";
 import type { CurrentUser } from "@/lib/auth/current-user";
-import type { ProposalIntake, ProposalStatus } from "@/lib/domain/types";
-
-// Only statuses with no approval history are safe to delete outright: a
-// `changes_requested` proposal already has an approver's decision recorded
-// in the `approvals` table, and that row cascades-deletes with the proposal
-// (see supabase/migrations/001_week3_schema.sql). Deleting it would erase
-// that audit trail, so it's deliberately excluded here.
-const DELETABLE_STATUSES: ProposalStatus[] = ["draft", "needs_clarification"];
+import { DELETABLE_STATUSES } from "@/lib/domain/types";
+import type { ProposalIntake } from "@/lib/domain/types";
 
 export async function createProposal(supabase: SupabaseClient<Database>, user: CurrentUser) {
   return proposalsRepo.createProposal(supabase, user.userId, user.fullName);

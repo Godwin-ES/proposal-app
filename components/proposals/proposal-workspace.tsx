@@ -20,7 +20,7 @@ import { ProposalEditorDialog } from "@/components/proposals/proposal-editor-dia
 import { ProposalDetailsEditor } from "@/components/proposals/proposal-details-editor";
 import { RegenerateSectionDialog } from "@/components/proposals/regenerate-section-dialog";
 import { SupportingMaterialPanel, type MaterialSummary } from "@/components/proposals/supporting-material-panel";
-import { DeleteProposalButton, DELETABLE_STATUSES } from "@/components/proposals/delete-proposal-button";
+import { DeleteProposalButton } from "@/components/proposals/delete-proposal-button";
 import { TimelineInput } from "@/components/shared/timeline-input";
 import { PricingInput } from "@/components/shared/pricing-input";
 import { VersionHistory, type VersionHistoryEntry } from "@/components/proposals/version-history";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Pencil, Send, X } from "lucide-react";
 import type { ClarificationFlag, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
+import { DELETABLE_STATUSES } from "@/lib/domain/types";
 import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { diffChangedSections } from "@/lib/domain/snapshot-diff";
 
@@ -214,7 +215,7 @@ export function ProposalWorkspace({
         ownerName={ownerName}
         updatedAt={updatedAt}
         actions={
-          DELETABLE_STATUSES.has(status) ? (
+          DELETABLE_STATUSES.includes(status) ? (
             <DeleteProposalButton
               proposalId={proposalId}
               clientLabel={`${draft.client.clientName || "this proposal"}${draft.client.companyName ? ` (${draft.client.companyName})` : ""}`}
