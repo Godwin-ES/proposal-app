@@ -161,7 +161,7 @@ describe.skipIf(!hasCredentials)("supporting material pipeline (hosted Supabase 
     ).rejects.toMatchObject({ code: "MATERIAL_LIMIT_EXCEEDED" });
   });
 
-  it("blocks add/remove once the proposal leaves an editable state", async () => {
+  it("blocks add/remove while pending_approval or delivered", async () => {
     const proposal = await freshProposal();
     await admin.from("proposals").update({ status: "pending_approval" }).eq("id", proposal.id);
 
@@ -172,5 +172,29 @@ describe.skipIf(!hasCredentials)("supporting material pipeline (hosted Supabase 
         user
       )
     ).rejects.toMatchObject({ code: "INVALID_STATE" });
+  });
+
+  it("still allows uploading material to an approved proposal", async () => {
+    // A salesperson revising an approved proposal (which regeneration
+    // already permits — see assertVersionWritableStatus) needs to be able
+    // to attach a newly relevant document first, not just regenerate
+    // against whatever was already uploaded before approval.
+    const proposal = await freshProposal();
+    await admin.from("proposals").update({ status: "approved" }).eq("id", proposal.id);
+
+    const content = "Newly relevant context added after approval.";
+    const file = new Blob([content], { type: "text/plain" });
+    const prep = await materialsService.prepareMaterialUpload(
+      supabase,
+      { proposalId: proposal.id, filename: "post-approval-note.txt", mimeType: "text/plain", sizeBytes: content.length },
+      user
+    );
+    const { error: uploadError } = await supabase.storage
+      .from(materialsRepo.SUPPORTING_MATERIAL_BUCKET)
+      .uploadToSignedUrl(prep.storagePath, prep.token, file);
+    expect(uploadError).toBeNull();
+
+    const finalized = await materialsService.finalizeMaterialUpload(supabase, prep.materialId, user);
+    expect(finalized.extraction_status).toBe("ready");
   });
 });

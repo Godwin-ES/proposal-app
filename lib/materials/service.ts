@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import * as materialsRepo from "@/lib/repositories/materials";
 import { getProposalForOwner } from "@/lib/proposals/service";
-import { assertEditableStatus } from "@/lib/domain/state-machine";
+import { assertVersionWritableStatus } from "@/lib/domain/state-machine";
 import { DomainError } from "@/lib/domain/errors";
 import {
   extensionFromFilename,
@@ -22,7 +22,7 @@ export async function prepareMaterialUpload(
   user: CurrentUser
 ) {
   const proposal = await getProposalForOwner(supabase, input.proposalId, user);
-  assertEditableStatus(proposal.status);
+  assertVersionWritableStatus(proposal.status);
 
   const extension = extensionFromFilename(input.filename);
   if (!isSupportedExtension(extension)) {
@@ -89,7 +89,7 @@ export async function finalizeMaterialUpload(
 ) {
   const material = await materialsRepo.getMaterial(supabase, materialId);
   const proposal = await getProposalForOwner(supabase, material.proposal_id, user);
-  assertEditableStatus(proposal.status);
+  assertVersionWritableStatus(proposal.status);
 
   return runExtraction(supabase, material);
 }
@@ -101,7 +101,7 @@ export async function retryMaterialExtraction(
 ) {
   const material = await materialsRepo.getMaterial(supabase, materialId);
   const proposal = await getProposalForOwner(supabase, material.proposal_id, user);
-  assertEditableStatus(proposal.status);
+  assertVersionWritableStatus(proposal.status);
 
   return runExtraction(supabase, material);
 }
@@ -174,7 +174,7 @@ export async function getMaterialText(supabase: SupabaseClient<Database>, materi
 export async function removeMaterial(supabase: SupabaseClient<Database>, materialId: string, user: CurrentUser) {
   const material = await materialsRepo.getMaterial(supabase, materialId);
   const proposal = await getProposalForOwner(supabase, material.proposal_id, user);
-  assertEditableStatus(proposal.status);
+  assertVersionWritableStatus(proposal.status);
 
   // Fail-closed, same as lib/storage/cleanup.ts: an unconfirmed Storage
   // removal must abort before the DB row is deleted, or the file becomes an

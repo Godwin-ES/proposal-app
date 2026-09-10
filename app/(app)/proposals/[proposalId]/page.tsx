@@ -42,7 +42,13 @@ export default async function ProposalPage({
   const intake = rowToIntake(proposal);
   const hasVersion = proposal.current_version_id !== null;
   const materials = await listMaterials(supabase, proposal.id, user);
-  const materialsEditable = isEditableStatus(proposal.status);
+  // Wider than isEditableStatus: materials should stay uploadable on an
+  // approved proposal too, matching section regeneration's own gate
+  // (assertVersionWritableStatus in lib/materials/service.ts) — otherwise a
+  // salesperson revising an approved proposal with new supporting material
+  // could regenerate a section but never actually attach the file that
+  // should inform it.
+  const materialsEditable = isVersionWritableStatus(proposal.status);
 
   if (!hasVersion) {
     const generationBlockers = evaluateGenerationReadiness(intake);
