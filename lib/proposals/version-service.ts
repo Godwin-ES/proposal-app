@@ -2,13 +2,21 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
-import type { ProposalSnapshot } from "@/lib/domain/types";
+import type { ChangedSectionLabel, ClarificationFlag, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
+import { PROPOSAL_SECTION_KEYS } from "@/lib/domain/types";
 import { getProposalForOwner } from "@/lib/proposals/service";
-import { getVersion, listVersionsForProposal, createProposalVersion, type VersionRow } from "@/lib/repositories/versions";
+import {
+  getVersion,
+  listVersionsForProposal,
+  createProposalVersion,
+  dismissClarificationFlag as dismissClarificationFlagRepo,
+  type VersionRow,
+} from "@/lib/repositories/versions";
 import { proposalSnapshotSchema } from "@/lib/domain/schemas";
 import { hashProposalSnapshot } from "@/lib/domain/hashing";
 import { evaluateApprovalReadiness } from "@/lib/domain/readiness";
 import { computeEditableStatus, assertVersionWritableStatus } from "@/lib/domain/state-machine";
+import { carryForwardClarificationFlags } from "@/lib/domain/clarification";
 import { DomainError } from "@/lib/domain/errors";
 
 export async function saveManualRevision(
@@ -16,7 +24,8 @@ export async function saveManualRevision(
   proposalId: string,
   expectedVersionId: string,
   snapshot: ProposalSnapshot,
-  user: CurrentUser
+  user: CurrentUser,
+  changedSection: ChangedSectionLabel | null = null
 ): Promise<VersionRow> {
   const proposal = await getProposalForOwner(supabase, proposalId, user);
   assertVersionWritableStatus(proposal.status);
@@ -31,8 +40,19 @@ export async function saveManualRevision(
     );
   }
 
+  // Only the AI-regeneratable sections can carry a clarification flag, so
+  // only editing one of those can resolve one — a Next Steps/Timeline/
+  // Pricing/Client Details edit still records `changedSection` for history
+  // below, but must not silently clear an unrelated flag.
+  const resolvedSection: ProposalSectionKey | null =
+    changedSection && (PROPOSAL_SECTION_KEYS as string[]).includes(changedSection)
+      ? (changedSection as ProposalSectionKey)
+      : null;
+  const previousFlags = (await getVersion(supabase, expectedVersionId)).clarification_flags as ClarificationFlag[];
+  const clarificationFlags = carryForwardClarificationFlags(previousFlags, resolvedSection);
+
   const approvalBlockers = evaluateApprovalReadiness({ snapshot: parsed.data, hasCurrentVersion: true });
-  const nextStatus = computeEditableStatus(approvalBlockers, []);
+  const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
   const contentHash = hashProposalSnapshot(parsed.data);
 
   return createProposalVersion(supabase, {
@@ -41,9 +61,9 @@ export async function saveManualRevision(
     snapshot: parsed.data,
     contentHash,
     changeType: "manual_edit",
-    changedSection: null,
+    changedSection,
     revisionInstruction: null,
-    clarificationFlags: [],
+    clarificationFlags,
     nextStatus,
   });
 }
@@ -55,6 +75,17 @@ export async function getVersionHistory(
 ): Promise<VersionRow[]> {
   await getProposalForOwner(supabase, proposalId, user);
   return listVersionsForProposal(supabase, proposalId);
+}
+
+export async function dismissClarificationFlag(
+  supabase: SupabaseClient<Database>,
+  proposalId: string,
+  versionId: string,
+  flagId: string,
+  user: CurrentUser
+): Promise<VersionRow> {
+  await getProposalForOwner(supabase, proposalId, user);
+  return dismissClarificationFlagRepo(supabase, proposalId, versionId, flagId);
 }
 
 export async function getVersionSnapshot(

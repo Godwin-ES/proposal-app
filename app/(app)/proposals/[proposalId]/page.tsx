@@ -111,12 +111,17 @@ export default async function ProposalPage({
       versionNumber={currentVersion.version_number}
       snapshot={currentVersion.snapshot}
       approvalBlockers={approvalBlockers}
-      clarificationFlags={(currentVersion.clarification_flags as string[] | null) ?? []}
+      clarificationFlags={currentVersion.clarification_flags}
       clientEmail={intake.clientEmail}
       changeRequest={changeRequest ? { comments: changeRequest.comments, createdAt: changeRequest.created_at } : null}
       editable={isVersionWritableStatus(proposal.status)}
       materialCount={materials.filter((m) => m.extraction_status === "ready").length}
-      canSubmitForApproval={isEditableStatus(proposal.status) && approvalBlockers.length === 0 && !changeRequest}
+      canSubmitForApproval={
+        isEditableStatus(proposal.status) &&
+        approvalBlockers.length === 0 &&
+        !changeRequest &&
+        currentVersion.clarification_flags.length === 0
+      }
       versions={versions.map((v) => ({
         id: v.id,
         versionNumber: v.version_number,

@@ -38,6 +38,32 @@ export const PROPOSAL_SECTION_KEYS: ProposalSectionKey[] = [
   "deliverables",
 ];
 
+/**
+ * Broader than ProposalSectionKey — every field a manual edit in the
+ * proposal workspace can touch, for labeling version history ("what
+ * changed"). Only the ProposalSectionKey subset is AI-regeneratable and
+ * only that subset can clear a clarification flag (see
+ * carryForwardClarificationFlags) — a Next Steps/Timeline/Pricing/Client
+ * Details edit is still recorded here for history, it just never resolves
+ * an AI-raised flag.
+ */
+export type ChangedSectionLabel = ProposalSectionKey | "nextSteps" | "timeline" | "pricing" | "clientDetails";
+
+/**
+ * An AI-raised concern about a generated version. `section` ties it to the
+ * content section that resolves it — editing or regenerating that section
+ * automatically clears the flag (see mergeClarificationFlags in
+ * lib/domain/clarification.ts). `section: null` is for concerns that aren't
+ * about one section (e.g. an uploaded file that seems unrelated to this
+ * proposal entirely) — those only clear via an explicit dismiss, since
+ * there's no single section whose edit would resolve them.
+ */
+export type ClarificationFlag = {
+  id: string;
+  section: ProposalSectionKey | null;
+  message: string;
+};
+
 export type ProposalIntake = {
   clientName: string;
   clientEmail: string;

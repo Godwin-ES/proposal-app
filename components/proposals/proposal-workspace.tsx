@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { saveManualRevisionAction, updateClientEmailAction } from "@/actions/proposals";
+import { saveManualRevisionAction, updateClientEmailAction, dismissClarificationFlagAction } from "@/actions/proposals";
 import { submitForApprovalAction } from "@/actions/approvals";
 import { ProposalHeader } from "@/components/proposals/proposal-header";
 import { LocalDateTime } from "@/components/shared/local-datetime";
@@ -29,8 +29,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Send } from "lucide-react";
-import type { ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
+import { Pencil, Send, X } from "lucide-react";
+import type { ChangedSectionLabel, ClarificationFlag, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
+import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 
 export function ProposalWorkspace({
   proposalId,
@@ -57,7 +58,7 @@ export function ProposalWorkspace({
   versionNumber: number;
   snapshot: ProposalSnapshot;
   approvalBlockers: string[];
-  clarificationFlags: string[];
+  clarificationFlags: ClarificationFlag[];
   editable: boolean;
   versions: VersionHistoryEntry[];
   materialCount: number;
@@ -80,8 +81,8 @@ export function ProposalWorkspace({
     });
   }
 
-  async function saveSnapshot(next: ProposalSnapshot): Promise<boolean> {
-    const result = await saveManualRevisionAction(proposalId, versionId, next);
+  async function saveSnapshot(next: ProposalSnapshot, changedSection: ChangedSectionLabel | null = null): Promise<boolean> {
+    const result = await saveManualRevisionAction(proposalId, versionId, next, changedSection);
     if (result.ok) {
       toast.success("Proposal updated.");
       router.refresh();
@@ -89,6 +90,16 @@ export function ProposalWorkspace({
     }
     toast.error(result.error.message);
     return false;
+  }
+
+  async function dismissFlag(flagId: string) {
+    const result = await dismissClarificationFlagAction(proposalId, versionId, flagId);
+    if (result.ok) {
+      toast.success("Flag dismissed.");
+      router.refresh();
+    } else {
+      toast.error(result.error.message);
+    }
   }
 
   async function saveClientEmail(email: string): Promise<boolean> {
@@ -135,11 +146,28 @@ export function ProposalWorkspace({
       {clarificationFlags.length > 0 ? (
         <div className="rounded-md border border-blue-300 bg-blue-50 p-4 text-sm dark:border-blue-900 dark:bg-blue-950">
           <p className="font-medium text-blue-900 dark:text-blue-200">
-            The AI flagged this for your review before submitting:
+            The AI flagged this — resolve or dismiss before submitting:
           </p>
-          <ul className="mt-1 list-disc pl-5 text-blue-800 dark:text-blue-300">
-            {clarificationFlags.map((flag, i) => (
-              <li key={i}>{flag}</li>
+          <ul className="mt-1 flex flex-col gap-1.5 text-blue-800 dark:text-blue-300">
+            {clarificationFlags.map((flag) => (
+              <li key={flag.id} className="flex items-start justify-between gap-3">
+                <span>
+                  {flag.section ? (
+                    <span className="font-medium">{SECTION_DISPLAY_LABELS[flag.section] ?? flag.section}: </span>
+                  ) : null}
+                  {flag.message}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 text-blue-800 hover:text-blue-900 dark:text-blue-300"
+                  aria-label="Dismiss flag"
+                  onClick={() => dismissFlag(flag.id)}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </li>
             ))}
           </ul>
         </div>
@@ -149,9 +177,11 @@ export function ProposalWorkspace({
         title="Approval readiness"
         blockers={
           editable
-            ? changeRequest
-              ? ["Revise this version based on the approver's notes above", ...approvalBlockers]
-              : approvalBlockers
+            ? [
+                ...(changeRequest ? ["Revise this version based on the approver's notes above"] : []),
+                ...(clarificationFlags.length > 0 ? ["Resolve or dismiss the AI's flagged concerns above"] : []),
+                ...approvalBlockers,
+              ]
             : []
         }
       />
@@ -195,7 +225,7 @@ export function ProposalWorkspace({
           <ProposalDetailsEditor
             client={snapshot.client}
             clientEmail={clientEmail}
-            onSave={(client) => saveSnapshot({ ...snapshot, client })}
+            onSave={(client) => saveSnapshot({ ...snapshot, client }, "clientDetails")}
             onSaveEmail={saveClientEmail}
           />
         ) : null}
@@ -206,7 +236,9 @@ export function ProposalWorkspace({
         value={snapshot.content.introduction}
         displayContent={snapshot.content.introduction}
         editable={editable}
-        onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, introduction: value } })}
+        onSave={(value) =>
+          saveSnapshot({ ...snapshot, content: { ...snapshot.content, introduction: value } }, "introduction")
+        }
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
@@ -223,7 +255,9 @@ export function ProposalWorkspace({
         value={snapshot.content.projectScope}
         displayContent={snapshot.content.projectScope}
         editable={editable}
-        onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, projectScope: value } })}
+        onSave={(value) =>
+          saveSnapshot({ ...snapshot, content: { ...snapshot.content, projectScope: value } }, "projectScope")
+        }
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
@@ -241,7 +275,10 @@ export function ProposalWorkspace({
         displayContent={snapshot.content.recommendedApproach}
         editable={editable}
         onSave={(value) =>
-          saveSnapshot({ ...snapshot, content: { ...snapshot.content, recommendedApproach: value } })
+          saveSnapshot(
+            { ...snapshot, content: { ...snapshot.content, recommendedApproach: value } },
+            "recommendedApproach"
+          )
         }
         extraActions={
           <RegenerateSectionDialog
@@ -267,16 +304,19 @@ export function ProposalWorkspace({
         description="One deliverable per line."
         editable={editable}
         onSave={(value) =>
-          saveSnapshot({
-            ...snapshot,
-            content: {
-              ...snapshot.content,
-              deliverables: value
-                .split("\n")
-                .map((line) => line.trim())
-                .filter(Boolean),
+          saveSnapshot(
+            {
+              ...snapshot,
+              content: {
+                ...snapshot.content,
+                deliverables: value
+                  .split("\n")
+                  .map((line) => line.trim())
+                  .filter(Boolean),
+              },
             },
-          })
+            "deliverables"
+          )
         }
         extraActions={
           <RegenerateSectionDialog
@@ -300,7 +340,9 @@ export function ProposalWorkspace({
                 title="Edit Timeline"
                 initialValue={snapshot.content.timeline}
                 renderInput={(value, onChange) => <TimelineInput value={value} onChange={onChange} />}
-                onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, timeline: value } })}
+                onSave={(value) =>
+                  saveSnapshot({ ...snapshot, content: { ...snapshot.content, timeline: value } }, "timeline")
+                }
               />
             ) : null
           }
@@ -315,7 +357,9 @@ export function ProposalWorkspace({
                 title="Edit Pricing"
                 initialValue={snapshot.content.pricing}
                 renderInput={(value, onChange) => <PricingInput value={value} onChange={onChange} />}
-                onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, pricing: value } })}
+                onSave={(value) =>
+                  saveSnapshot({ ...snapshot, content: { ...snapshot.content, pricing: value } }, "pricing")
+                }
               />
             ) : null
           }
@@ -327,7 +371,9 @@ export function ProposalWorkspace({
         value={snapshot.content.nextSteps}
         displayContent={snapshot.content.nextSteps}
         editable={editable}
-        onSave={(value) => saveSnapshot({ ...snapshot, content: { ...snapshot.content, nextSteps: value } })}
+        onSave={(value) =>
+          saveSnapshot({ ...snapshot, content: { ...snapshot.content, nextSteps: value } }, "nextSteps")
+        }
       />
 
       <div>

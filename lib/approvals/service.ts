@@ -44,6 +44,15 @@ export async function submitProposalForApproval(
     );
   }
 
+  if (version.clarification_flags.length > 0) {
+    throw new DomainError(
+      "READINESS_ERROR",
+      "submit-approval",
+      "Resolve or dismiss the AI's flagged concerns before submitting.",
+      true
+    );
+  }
+
   return approvalsRepo.submitForApproval(supabase, proposalId, expectedVersionId);
 }
 

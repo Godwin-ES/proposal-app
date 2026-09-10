@@ -8,12 +8,27 @@ export const materialUsageSchema = z.object({
   factUsed: z.string().trim().min(1),
 });
 
+/**
+ * "general" stands in for "not tied to one section" (e.g. an uploaded file
+ * that seems unrelated to this proposal entirely). A real `null` would work
+ * for our own domain type, but Gemini's schema format has real trouble with
+ * nullable/union JSON Schema shapes (the same class of incompatibility that
+ * broke `const` on regeneration schemas) — a plain enum sidesteps that
+ * entirely. `lib/domain/clarification.ts` maps "general" -> `null` when
+ * building our internal ClarificationFlag.
+ */
+export const clarificationFlagSchema = z.object({
+  section: z.enum(["introduction", "projectScope", "recommendedApproach", "deliverables", "general"]),
+  message: z.string().trim().min(1),
+});
+export type AIClarificationFlag = z.infer<typeof clarificationFlagSchema>;
+
 export const generatedSectionsSchema = z.object({
   introduction: z.string().trim().min(1),
   projectScope: z.string().trim().min(1),
   recommendedApproach: z.string().trim().min(1),
   deliverables: z.array(z.string().trim().min(1)).min(1),
-  clarificationFlags: z.array(z.string().trim().min(1)).default([]),
+  clarificationFlags: z.array(clarificationFlagSchema).default([]),
   supportingMaterialUsage: z.array(materialUsageSchema).default([]),
 });
 
@@ -23,7 +38,7 @@ export type MaterialUsage = z.infer<typeof materialUsageSchema>;
 export const introductionRegenerationSchema = z.object({
   section: z.literal("introduction"),
   content: z.string().trim().min(1),
-  clarificationFlags: z.array(z.string().trim().min(1)).default([]),
+  clarificationFlags: z.array(clarificationFlagSchema).default([]),
   supportingMaterialUsage: z.array(materialUsageSchema).default([]),
 });
 
@@ -38,7 +53,7 @@ export const recommendedApproachRegenerationSchema = introductionRegenerationSch
 export const deliverablesRegenerationSchema = z.object({
   section: z.literal("deliverables"),
   content: z.array(z.string().trim().min(1)).min(1),
-  clarificationFlags: z.array(z.string().trim().min(1)).default([]),
+  clarificationFlags: z.array(clarificationFlagSchema).default([]),
   supportingMaterialUsage: z.array(materialUsageSchema).default([]),
 });
 

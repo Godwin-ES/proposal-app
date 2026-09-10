@@ -497,6 +497,33 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: undefined
       }
+      dismiss_clarification_flag: {
+        Args: { p_proposal_id: string; p_version_id: string; p_flag_id: string }
+        Returns: {
+          change_type: string
+          changed_section: string | null
+          clarification_flags: Json
+          content_hash: string
+          created_at: string
+          created_by: string
+          id: string
+          pdf_error: string | null
+          pdf_generated_at: string | null
+          pdf_sha256: string | null
+          pdf_status: string
+          pdf_storage_path: string | null
+          proposal_id: string
+          revision_instruction: string | null
+          snapshot: Json
+          version_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proposal_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_proposal_version: {
         Args: {
           p_change_type: string

@@ -42,7 +42,7 @@ export function assertVersionWritableStatus(status: ProposalStatus): void {
 
 export function computeEditableStatus(
   approvalBlockers: string[],
-  warnings: string[]
+  warnings: unknown[]
 ): "draft" | "needs_clarification" {
   return approvalBlockers.length > 0 || warnings.length > 0 ? "needs_clarification" : "draft";
 }

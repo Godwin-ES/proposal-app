@@ -2,8 +2,9 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
-import type { GenerationProvider, ProposalSectionKey } from "@/lib/domain/types";
+import type { ClarificationFlag, GenerationProvider, ProposalSectionKey } from "@/lib/domain/types";
 import { PROPOSAL_SECTION_KEYS } from "@/lib/domain/types";
+import { withFlagIds, carryForwardClarificationFlags } from "@/lib/domain/clarification";
 import { rowToIntake } from "@/lib/repositories/proposals";
 import { getProposalForOwner } from "@/lib/proposals/service";
 import { getGenerationMaterials } from "@/lib/materials/service";
@@ -79,7 +80,8 @@ export async function generateInitialDraft(
   const snapshot = composeInitialSnapshot(intake, aiResult.data);
   const contentHash = hashProposalSnapshot(snapshot);
   const approvalBlockers = evaluateApprovalReadiness({ snapshot, hasCurrentVersion: true });
-  const nextStatus = computeEditableStatus(approvalBlockers, aiResult.data.clarificationFlags);
+  const clarificationFlags = withFlagIds(aiResult.data.clarificationFlags);
+  const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
 
   let version: VersionRow;
   try {
@@ -91,7 +93,7 @@ export async function generateInitialDraft(
       changeType: "initial_generation",
       changedSection: null,
       revisionInstruction: null,
-      clarificationFlags: aiResult.data.clarificationFlags,
+      clarificationFlags,
       nextStatus,
     });
   } catch (error) {
@@ -187,7 +189,13 @@ export async function regenerateSection(
   );
   const contentHash = hashProposalSnapshot(newSnapshot);
   const approvalBlockers = evaluateApprovalReadiness({ snapshot: newSnapshot, hasCurrentVersion: true });
-  const nextStatus = computeEditableStatus(approvalBlockers, aiResult.data.clarificationFlags);
+  const previousFlags = (baseVersion.clarification_flags as ClarificationFlag[] | null) ?? [];
+  const clarificationFlags = carryForwardClarificationFlags(
+    previousFlags,
+    targetSection,
+    withFlagIds(aiResult.data.clarificationFlags)
+  );
+  const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
 
   let version: VersionRow;
   try {
@@ -199,7 +207,7 @@ export async function regenerateSection(
       changeType: "section_regeneration",
       changedSection: targetSection,
       revisionInstruction: instruction,
-      clarificationFlags: aiResult.data.clarificationFlags,
+      clarificationFlags,
       nextStatus,
     });
   } catch (error) {

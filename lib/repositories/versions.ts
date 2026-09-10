@@ -1,15 +1,24 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import type { ProposalChangeType, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
+import type {
+  ChangedSectionLabel,
+  ClarificationFlag,
+  ProposalChangeType,
+  ProposalSnapshot,
+} from "@/lib/domain/types";
 import { DomainError, mapRpcError } from "@/lib/domain/errors";
 
 type VersionRowBase = Database["public"]["Tables"]["proposal_versions"]["Row"];
-export type VersionRow = Omit<VersionRowBase, "change_type" | "pdf_status" | "changed_section" | "snapshot"> & {
+export type VersionRow = Omit<
+  VersionRowBase,
+  "change_type" | "pdf_status" | "changed_section" | "snapshot" | "clarification_flags"
+> & {
   change_type: ProposalChangeType;
   pdf_status: "not_generated" | "generating" | "ready" | "failed";
-  changed_section: ProposalSectionKey | null;
+  changed_section: ChangedSectionLabel | null;
   snapshot: ProposalSnapshot;
+  clarification_flags: ClarificationFlag[];
 };
 
 export async function createProposalVersion(
@@ -20,9 +29,9 @@ export async function createProposalVersion(
     snapshot: ProposalSnapshot;
     contentHash: string;
     changeType: ProposalChangeType;
-    changedSection: ProposalSectionKey | null;
+    changedSection: ChangedSectionLabel | null;
     revisionInstruction: string | null;
-    clarificationFlags: string[];
+    clarificationFlags: ClarificationFlag[];
     nextStatus: "draft" | "needs_clarification";
   }
 ): Promise<VersionRow> {
@@ -51,6 +60,24 @@ export async function getVersion(supabase: SupabaseClient<Database>, versionId: 
   const { data, error } = await supabase.from("proposal_versions").select().eq("id", versionId).maybeSingle();
   if (error) throw new DomainError("VALIDATION_ERROR", "version-lookup", error.message, true);
   if (!data) throw new DomainError("NOT_FOUND", "version-lookup", "This proposal version does not exist.", false);
+  return data as unknown as VersionRow;
+}
+
+export async function dismissClarificationFlag(
+  supabase: SupabaseClient<Database>,
+  proposalId: string,
+  versionId: string,
+  flagId: string
+): Promise<VersionRow> {
+  const { data, error } = await supabase
+    .rpc("dismiss_clarification_flag", {
+      p_proposal_id: proposalId,
+      p_version_id: versionId,
+      p_flag_id: flagId,
+    })
+    .single();
+
+  if (error) throw mapRpcError(error, "dismiss-clarification-flag");
   return data as unknown as VersionRow;
 }
 
