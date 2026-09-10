@@ -4,7 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { getProposalForOwner } from "@/lib/proposals/service";
 import { getProposal } from "@/lib/repositories/proposals";
-import { getVersion } from "@/lib/repositories/versions";
+import { getVersion, listVersionChangesForApprover } from "@/lib/repositories/versions";
 import * as approvalsRepo from "@/lib/repositories/approvals";
 import * as proposalsRepo from "@/lib/repositories/proposals";
 import { evaluateApprovalReadiness } from "@/lib/domain/readiness";
@@ -88,5 +88,20 @@ export async function getApprovalReview(supabase: SupabaseClient<Database>, prop
 
   const version = await getVersion(supabase, proposal.current_version_id);
   const decisions = await approvalsRepo.listApprovalsForProposal(supabase, proposalId);
-  return { proposal, version, decisions };
+
+  // On a resubmission, the salesperson may have revised past the exact
+  // version this approver last decided on — give them a metadata-only "what
+  // changed since then" summary (never full historical content; see the
+  // migration for why that stays off-limits).
+  const latestDecision = decisions[0] ?? null;
+  const changesSinceLastReview =
+    latestDecision && latestDecision.version_id !== proposal.current_version_id
+      ? await listVersionChangesForApprover(
+          supabase,
+          proposalId,
+          (await getVersion(supabase, latestDecision.version_id)).version_number
+        )
+      : [];
+
+  return { proposal, version, decisions, changesSinceLastReview };
 }

@@ -3,10 +3,12 @@ import { requireApprover } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getApprovalReview } from "@/lib/approvals/service";
 import { PageHeader } from "@/components/shared/page-header";
-import { ProposalSectionCard } from "@/components/proposals/proposal-section-card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ApprovalDecisionPanel } from "@/components/approvals/approval-decision-panel";
 import { Badge } from "@/components/ui/badge";
 import { LocalDateTime } from "@/components/shared/local-datetime";
+import { buildProposalText } from "@/lib/templates/proposal";
+import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { DomainError } from "@/lib/domain/errors";
 
 export default async function ApprovalReviewPage({
@@ -26,7 +28,7 @@ export default async function ApprovalReviewPage({
     throw error;
   }
 
-  const { proposal, version, decisions } = review;
+  const { proposal, version, decisions, changesSinceLastReview } = review;
   const { snapshot } = version;
   const isPending = proposal.status === "pending_approval";
   const latestDecision = decisions[0] ?? null;
@@ -57,24 +59,46 @@ export default async function ApprovalReviewPage({
         </div>
       ) : null}
 
-      <ProposalSectionCard title="Introduction" content={snapshot.content.introduction} />
-      <ProposalSectionCard title="Project Scope" content={snapshot.content.projectScope} />
-      <ProposalSectionCard title="Recommended Approach" content={snapshot.content.recommendedApproach} />
-      <ProposalSectionCard
-        title="Deliverables"
-        content={
-          <ul className="list-disc pl-5">
-            {snapshot.content.deliverables.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        }
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <ProposalSectionCard title="Timeline" content={snapshot.content.timeline} />
-        <ProposalSectionCard title="Pricing" content={snapshot.content.pricing} />
-      </div>
-      <ProposalSectionCard title="Next Steps" content={snapshot.content.nextSteps} />
+      {isPending && latestDecision ? (
+        <div className="rounded-md border bg-muted/40 p-4 text-sm">
+          <p className="font-medium">
+            You previously requested changes on <LocalDateTime value={latestDecision.created_at} />
+          </p>
+          {latestDecision.comments ? (
+            <p className="mt-1 text-muted-foreground">&ldquo;{latestDecision.comments}&rdquo;</p>
+          ) : null}
+          {changesSinceLastReview.length > 0 ? (
+            <div className="mt-3">
+              <p className="font-medium">
+                Changes since then (v{changesSinceLastReview[0].versionNumber - 1} → v{version.version_number}):
+              </p>
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                {changesSinceLastReview.map((change) => (
+                  <li key={change.versionNumber}>
+                    v{change.versionNumber} —{" "}
+                    {change.changeType === "section_regeneration"
+                      ? "regenerated"
+                      : change.changeType === "manual_edit"
+                        ? "manually edited"
+                        : "generated"}
+                    {change.changedSection ? `: ${SECTION_DISPLAY_LABELS[change.changedSection]}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="mt-2 text-muted-foreground">
+              Resubmitted with no recorded changes since your last review.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      <Card>
+        <CardContent className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+          {buildProposalText(snapshot)}
+        </CardContent>
+      </Card>
 
       {isPending ? (
         <ApprovalDecisionPanel proposalId={proposal.id} versionId={version.id} versionNumber={version.version_number} />

@@ -81,6 +81,32 @@ export async function dismissClarificationFlag(
   return data as unknown as VersionRow;
 }
 
+export type VersionChangeSummary = {
+  versionNumber: number;
+  changeType: ProposalChangeType;
+  changedSection: ChangedSectionLabel | null;
+  createdAt: string;
+};
+
+export async function listVersionChangesForApprover(
+  supabase: SupabaseClient<Database>,
+  proposalId: string,
+  sinceVersionNumber: number
+): Promise<VersionChangeSummary[]> {
+  const { data, error } = await supabase.rpc("list_version_changes_for_approver", {
+    p_proposal_id: proposalId,
+    p_since_version_number: sinceVersionNumber,
+  });
+
+  if (error) throw mapRpcError(error, "version-change-summary");
+  return (data ?? []).map((row) => ({
+    versionNumber: row.version_number,
+    changeType: row.change_type as ProposalChangeType,
+    changedSection: row.changed_section as ChangedSectionLabel | null,
+    createdAt: row.created_at,
+  }));
+}
+
 export async function listVersionsForProposal(
   supabase: SupabaseClient<Database>,
   proposalId: string

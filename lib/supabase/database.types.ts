@@ -561,6 +561,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_version_changes_for_approver: {
+        Args: { p_proposal_id: string; p_since_version_number: number }
+        Returns: {
+          version_number: number
+          change_type: string
+          changed_section: string | null
+          created_at: string
+        }[]
+      }
       current_role_is: { Args: { target_role: string }; Returns: boolean }
       decide_proposal_approval: {
         Args: {
