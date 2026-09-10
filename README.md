@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Koya Proposal Studio
 
-## Getting Started
+An AI-assisted sales proposal application for Koya Talent: a salesperson captures a discovery call, generates a client-ready proposal with Claude, an independent approver signs off on the exact version submitted, and the approved PDF is emailed to the client — every step logged and immutable once it happens.
 
-First, run the development server:
+## Product structure
+
+- **Dashboard (Salesperson)** — proposals grouped into In Progress / Pending Approval / Approved / Delivered, with the intake form, supporting-material upload, AI generation, in-place section editing, and section regeneration.
+- **Approvals (Approver)** — a queue of proposals awaiting review, plus Changes Requested and Approved history. Review is read-only against the *exact* version submitted, never a live document. Self-approval is blocked at the database level.
+- **Delivery (Salesperson)** — final PDF generation from the approved version, controlled send to the client's email via Resend, and a full delivery attempt history (including recoverable "uncertain outcome" handling if a send can't be confirmed).
+
+Proposal content is versioned: every AI generation, section regeneration, or manual edit creates a new immutable snapshot rather than overwriting the last one, so the exact content an approver signed off on can never silently change underneath them.
+
+## Tech stack
+
+- **Next.js 16** (App Router) + TypeScript, Tailwind, shadcn/ui
+- **Supabase** — Postgres, Auth, and Storage, with RLS policies and `security definer` RPCs enforcing every workflow transition (submission, approval, delivery) at the database layer, not just in application code
+- **Claude** (`@anthropic-ai/sdk`)
+- **@react-pdf/renderer** for the final client-facing PDF
+- **Resend** for delivery email
+- **Vitest** (unit + integration against the real hosted Supabase project) and **Playwright** (e2e)
+
+## Local setup
+
+Requires Node 20+ and pnpm.
+
+1. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+2. Copy the environment template and fill it in:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   You'll need a Supabase project (URL + anon key), an Anthropic API key and a Resend API key. See [Environment variables](#environment-variables) below.
+
+3. Apply the database schema — run the SQL files in `supabase/migrations/` in order (001 through 005) against your Supabase project via the SQL Editor.
+
+4. Start the dev server:
+
+   ```bash
+   pnpm dev
+   ```
+
+5. Open <http://localhost:3000>.
+
+## Environment variables
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Public anon/publishable key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Local dev/tests only | Not read by the app itself — only used by the integration test suite and one-off admin scripts. Never expose client-side. |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | Yes | Official generation path |
+| `RESEND_API_KEY` | Yes | Delivery email |
+| `EMAIL_FROM` | Yes | Supports `"Display Name <address>"` format |
+| `RESEND_SANDBOX_RECIPIENT` | Optional | Redirects every send to one inbox at the provider boundary only — the UI, delivery history, and readiness checks still show the real client email untouched. Useful on Resend's sandbox sender, which can only deliver to the account's own address anyway. |
+
+## Tests
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm test        # unit + integration (vitest)
+pnpm test:e2e    # full login-to-delivery flow (playwright)
+pnpm check       # lint + typecheck + unit/integration tests
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
