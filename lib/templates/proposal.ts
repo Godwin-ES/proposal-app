@@ -41,6 +41,7 @@ export function buildProposalText(snapshot: ProposalSnapshot): string {
 
   return `Proposal for ${client.clientName}
 
+${client.companyName}
 Prepared by ${client.salespersonName}
 Date: ${client.dateOfCall}
 

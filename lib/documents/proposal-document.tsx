@@ -43,17 +43,7 @@ const styles = StyleSheet.create({
   bullet: { width: 14, fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: MUTED },
   deliverableText: { flex: 1, fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: INK },
 
-  highlightBox: {
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: RULE,
-    borderRadius: 4,
-    marginTop: 4,
-  },
-  highlightCell: { flex: 1, padding: 14 },
-  highlightDivider: { width: 1, backgroundColor: RULE },
-  highlightFrame: { fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: MUTED, marginBottom: 8 },
-  highlightValue: { fontSize: 13, fontWeight: 700, color: INK, marginBottom: 8 },
+  valueLine: { fontSize: 13, fontWeight: 700, color: INK, marginBottom: 8 },
 
   signatureBlock: { marginTop: 8 },
   signatureLine: { fontSize: BODY_SIZE, lineHeight: LINE_HEIGHT, color: INK, marginBottom: 2 },
@@ -130,21 +120,17 @@ export function ProposalDocument({ snapshot }: { snapshot: ProposalSnapshot }) {
         </View>
 
         <View style={styles.section} wrap={false}>
-          <View style={styles.highlightBox}>
-            <View style={styles.highlightCell}>
-              <SectionHeading number="4." title="Timeline" />
-              <Text style={styles.highlightFrame}>{buildTimelineIntro()}</Text>
-              <Text style={styles.highlightValue}>{content.timeline}</Text>
-              <Text style={styles.highlightFrame}>{buildTimelineOutro()}</Text>
-            </View>
-            <View style={styles.highlightDivider} />
-            <View style={styles.highlightCell}>
-              <SectionHeading number="5." title="Pricing" />
-              <Text style={styles.highlightFrame}>{buildPricingIntro()}</Text>
-              <Text style={styles.highlightValue}>{content.pricing}</Text>
-              <Text style={styles.highlightFrame}>{buildPricingOutro()}</Text>
-            </View>
-          </View>
+          <SectionHeading number="4." title="Timeline" />
+          <Text style={styles.frame}>{buildTimelineIntro()}</Text>
+          <Text style={styles.valueLine}>{content.timeline}</Text>
+          <Text style={styles.frame}>{buildTimelineOutro()}</Text>
+        </View>
+
+        <View style={styles.section} wrap={false}>
+          <SectionHeading number="5." title="Pricing" />
+          <Text style={styles.frame}>{buildPricingIntro()}</Text>
+          <Text style={styles.valueLine}>{content.pricing}</Text>
+          <Text style={styles.frame}>{buildPricingOutro()}</Text>
         </View>
 
         <View style={styles.section} wrap={false}>
