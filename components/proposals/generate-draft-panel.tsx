@@ -42,7 +42,7 @@ export function GenerateDraftPanel({ proposalId, ready }: { proposalId: string; 
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="anthropic">Claude (official)</SelectItem>
+              <SelectItem value="anthropic">Claude Sonnet 5</SelectItem>
               <SelectItem value="google">Gemini</SelectItem>
             </SelectContent>
           </Select>
