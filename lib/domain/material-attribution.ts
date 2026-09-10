@@ -23,7 +23,7 @@ export type ReviewContextSection = {
 };
 
 export type ReviewContext = {
-  sourcesUsed: string[];
+  sourcesUsed: ReviewContextMaterial[];
   sections: ReviewContextSection[];
 };
 
@@ -51,35 +51,41 @@ export function computeReviewContext(
     .sort((a, b) => b.versionNumber - a.versionNumber);
 
   const runByOutputVersionId = new Map(generationRuns.map((r) => [r.outputVersionId, r]));
-  const filenameById = new Map(materials.map((m) => [m.id, m.filename]));
+  const materialById = new Map(materials.map((m) => [m.id, m]));
 
-  function filenamesFor(versionId: string, section: ProposalSectionKey): string[] {
+  function materialsFor(versionId: string, section: ProposalSectionKey): ReviewContextMaterial[] {
     const run = runByOutputVersionId.get(versionId);
     if (!run) return [];
-    const names = run.materialUsage
+    const cited = run.materialUsage
       .filter((u) => u.sections.includes(section))
-      .map((u) => filenameById.get(u.materialId))
-      .filter((f): f is string => Boolean(f));
-    return Array.from(new Set(names));
+      .map((u) => materialById.get(u.materialId))
+      .filter((m): m is ReviewContextMaterial => Boolean(m));
+    return Array.from(new Map(cited.map((m) => [m.id, m])).values());
   }
 
-  const sections: ReviewContextSection[] = AI_SECTIONS.map((section) => {
+  /** Which materials (if any) currently ground this section — empty if the
+   * section's last determining change was a manual edit, or cites nothing. */
+  function citedMaterialsForSection(section: ProposalSectionKey): ReviewContextMaterial[] {
     for (const v of byVersionNumberDesc) {
-      if (v.changeType === "initial_generation") {
-        const filenames = filenamesFor(v.id, section);
-        return { section, grounded: filenames.length > 0, filenames };
-      }
+      if (v.changeType === "initial_generation") return materialsFor(v.id, section);
       if (v.changedSections.includes(section)) {
-        if (v.changeType === "manual_edit") {
-          return { section, grounded: false, filenames: [] };
-        }
-        const filenames = filenamesFor(v.id, section);
-        return { section, grounded: filenames.length > 0, filenames };
+        return v.changeType === "manual_edit" ? [] : materialsFor(v.id, section);
       }
     }
-    return { section, grounded: false, filenames: [] };
-  });
+    return [];
+  }
 
-  const sourcesUsed = Array.from(new Set(sections.flatMap((s) => s.filenames)));
+  const citedBySection = AI_SECTIONS.map((section) => ({ section, cited: citedMaterialsForSection(section) }));
+
+  const sections: ReviewContextSection[] = citedBySection.map(({ section, cited }) => ({
+    section,
+    grounded: cited.length > 0,
+    filenames: cited.map((m) => m.filename),
+  }));
+
+  const sourcesUsed = Array.from(
+    new Map(citedBySection.flatMap(({ cited }) => cited).map((m) => [m.id, m])).values()
+  );
+
   return { sourcesUsed, sections };
 }

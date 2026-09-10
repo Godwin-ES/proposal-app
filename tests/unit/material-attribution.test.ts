@@ -17,7 +17,7 @@ describe("computeReviewContext", () => {
 
     const context = computeReviewContext("v1", versions, generationRuns, MATERIALS);
 
-    expect(context.sourcesUsed).toEqual(["discovery-notes.pdf"]);
+    expect(context.sourcesUsed).toEqual([{ id: "mat-1", filename: "discovery-notes.pdf" }]);
     const scope = context.sections.find((s) => s.section === "projectScope")!;
     expect(scope.grounded).toBe(true);
     expect(scope.filenames).toEqual(["discovery-notes.pdf"]);

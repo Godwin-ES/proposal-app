@@ -580,6 +580,10 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: Json
       }
+      get_review_material_text: {
+        Args: { p_proposal_id: string; p_material_id: string }
+        Returns: Json
+      }
       current_role_is: { Args: { target_role: string }; Returns: boolean }
       decide_proposal_approval: {
         Args: {

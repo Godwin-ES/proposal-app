@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireSalesperson, requireApprover } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { submitProposalForApproval, decideProposalApproval } from "@/lib/approvals/service";
+import {
+  submitProposalForApproval,
+  decideProposalApproval,
+  getReviewMaterialTextForApprover,
+} from "@/lib/approvals/service";
 import { DomainError } from "@/lib/domain/errors";
 import type { ActionResult } from "@/lib/domain/types";
 
@@ -30,6 +34,20 @@ export async function submitForApprovalAction(
     return { ok: true, data: null };
   } catch (error) {
     return { ok: false, error: toActionError(error, "submit-approval") };
+  }
+}
+
+export async function getReviewMaterialTextAction(
+  proposalId: string,
+  materialId: string
+): Promise<ActionResult<{ filename: string; extractedText: string | null }>> {
+  try {
+    await requireApprover();
+    const supabase = await createSupabaseServerClient();
+    const result = await getReviewMaterialTextForApprover(supabase, proposalId, materialId);
+    return { ok: true, data: result };
+  } catch (error) {
+    return { ok: false, error: toActionError(error, "review-material-text") };
   }
 }
 

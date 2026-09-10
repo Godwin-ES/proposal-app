@@ -72,6 +72,19 @@ export async function retryMaterialExtractionAction(
   }
 }
 
+export async function getMaterialTextAction(
+  materialId: string
+): Promise<ActionResult<{ filename: string; text: string }>> {
+  try {
+    const user = await requireSalesperson();
+    const supabase = await createSupabaseServerClient();
+    const result = await materialsService.getMaterialText(supabase, materialId, user);
+    return { ok: true, data: result };
+  } catch (error) {
+    return { ok: false, error: toActionError(error, "material-text") };
+  }
+}
+
 export async function removeMaterialAction(proposalId: string, materialId: string): Promise<ActionResult<null>> {
   try {
     const user = await requireSalesperson();

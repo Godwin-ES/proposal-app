@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { LocalDateTime } from "@/components/shared/local-datetime";
 import { buildProposalText } from "@/lib/templates/proposal";
 import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
+import { SourceMaterialsList } from "@/components/approvals/source-materials-list";
 import { DomainError } from "@/lib/domain/errors";
 
 export default async function ApprovalReviewPage({
@@ -117,15 +118,7 @@ export default async function ApprovalReviewPage({
         <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
           <div>
             <p className="font-medium">Sources used</p>
-            {reviewContext.sourcesUsed.length > 0 ? (
-              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
-                {reviewContext.sourcesUsed.map((filename) => (
-                  <li key={filename}>{filename}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-1 text-muted-foreground">No supporting material was used.</p>
-            )}
+            <SourceMaterialsList proposalId={proposal.id} sources={reviewContext.sourcesUsed} />
           </div>
           <div>
             <p className="font-medium">AI-grounded sections</p>

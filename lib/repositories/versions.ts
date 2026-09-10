@@ -127,6 +127,19 @@ export async function getReviewMaterialsContext(
   };
 }
 
+export async function getReviewMaterialText(
+  supabase: SupabaseClient<Database>,
+  proposalId: string,
+  materialId: string
+): Promise<{ filename: string; extractedText: string | null }> {
+  const { data, error } = await supabase.rpc("get_review_material_text", {
+    p_proposal_id: proposalId,
+    p_material_id: materialId,
+  });
+  if (error) throw mapRpcError(error, "review-material-text");
+  return data as unknown as { filename: string; extractedText: string | null };
+}
+
 export async function listVersionsForProposal(
   supabase: SupabaseClient<Database>,
   proposalId: string

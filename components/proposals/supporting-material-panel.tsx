@@ -3,16 +3,18 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileWarning, FileCheck2, FileClock, Loader2, Trash2, RotateCw, Upload } from "lucide-react";
+import { Eye, FileWarning, FileCheck2, FileClock, Loader2, Trash2, RotateCw, Upload } from "lucide-react";
 import {
   prepareMaterialUploadAction,
   finalizeMaterialUploadAction,
   retryMaterialExtractionAction,
   removeMaterialAction,
+  getMaterialTextAction,
 } from "@/actions/materials";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MaterialTextDialog } from "@/components/shared/material-text-dialog";
 
 export type MaterialSummary = {
   id: string;
@@ -39,6 +41,23 @@ export function SupportingMaterialPanel({
   const [isPending, startTransition] = useTransition();
   const [busyMaterialId, setBusyMaterialId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [viewing, setViewing] = useState<{
+    filename: string | null;
+    text: string | null;
+    loading: boolean;
+    error: string | null;
+  } | null>(null);
+
+  async function handleView(material: MaterialSummary) {
+    setViewing({ filename: material.filename, text: null, loading: true, error: null });
+    const result = await getMaterialTextAction(material.id);
+    if (result.ok) {
+      setViewing({ filename: result.data.filename, text: result.data.text, loading: false, error: null });
+    } else {
+      setViewing({ filename: material.filename, text: null, loading: false, error: result.error.message });
+    }
+  }
 
   async function handleFileSelected(file: File) {
     setUploading(true);
@@ -147,38 +166,50 @@ export function SupportingMaterialPanel({
                     )}
                   </div>
                 </div>
-                {editable ? (
-                  <div className="flex shrink-0 items-center gap-1">
-                    {material.extractionStatus === "failed" ? (
+                <div className="flex shrink-0 items-center gap-1">
+                  {material.extractionStatus === "ready" ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`View ${material.filename}`}
+                      onClick={() => handleView(material)}
+                    >
+                      <Eye className="size-4" />
+                    </Button>
+                  ) : null}
+                  {editable ? (
+                    <>
+                      {material.extractionStatus === "failed" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Retry extracting ${material.filename}`}
+                          disabled={isPending}
+                          onClick={() => handleRetry(material.id)}
+                        >
+                          {isPending && busyMaterialId === material.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <RotateCw className="size-4" />
+                          )}
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Retry extracting ${material.filename}`}
+                        aria-label={`Remove ${material.filename}`}
                         disabled={isPending}
-                        onClick={() => handleRetry(material.id)}
+                        onClick={() => handleRemove(material.id)}
                       >
                         {isPending && busyMaterialId === material.id ? (
                           <Loader2 className="size-4 animate-spin" />
                         ) : (
-                          <RotateCw className="size-4" />
+                          <Trash2 className="size-4" />
                         )}
                       </Button>
-                    ) : null}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove ${material.filename}`}
-                      disabled={isPending}
-                      onClick={() => handleRemove(material.id)}
-                    >
-                      {isPending && busyMaterialId === material.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
-                      )}
-                    </Button>
-                  </div>
-                ) : null}
+                    </>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
@@ -211,6 +242,15 @@ export function SupportingMaterialPanel({
           </div>
         ) : null}
       </CardContent>
+
+      <MaterialTextDialog
+        open={viewing !== null}
+        onOpenChange={(open) => !open && setViewing(null)}
+        filename={viewing?.filename ?? null}
+        text={viewing?.text ?? null}
+        loading={viewing?.loading ?? false}
+        error={viewing?.error ?? null}
+      />
     </Card>
   );
 }

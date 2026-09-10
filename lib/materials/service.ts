@@ -155,6 +155,22 @@ async function runExtraction(supabase: SupabaseClient<Database>, material: mater
   }
 }
 
+export async function getMaterialText(supabase: SupabaseClient<Database>, materialId: string, user: CurrentUser) {
+  const material = await materialsRepo.getMaterial(supabase, materialId);
+  await getProposalForOwner(supabase, material.proposal_id, user);
+
+  if (material.extraction_status !== "ready" || !material.extracted_text) {
+    throw new DomainError(
+      "NOT_FOUND",
+      "material-text",
+      "No extracted text is available for this file yet.",
+      false
+    );
+  }
+
+  return { filename: material.filename, text: material.extracted_text };
+}
+
 export async function removeMaterial(supabase: SupabaseClient<Database>, materialId: string, user: CurrentUser) {
   const material = await materialsRepo.getMaterial(supabase, materialId);
   const proposal = await getProposalForOwner(supabase, material.proposal_id, user);
