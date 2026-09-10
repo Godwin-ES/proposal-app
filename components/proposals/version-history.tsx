@@ -15,7 +15,7 @@ export type VersionHistoryEntry = {
   versionNumber: number;
   createdAt: string;
   changeType: ProposalChangeType;
-  changedSection: ChangedSectionLabel | null;
+  changedSections: ChangedSectionLabel[];
   snapshot: ProposalSnapshot;
   isCurrent: boolean;
   isApproved: boolean;
@@ -27,7 +27,17 @@ const CHANGE_TYPE_LABELS: Record<ProposalChangeType, string> = {
   section_regeneration: "Section regeneration",
 };
 
-export function VersionHistory({ versions }: { versions: VersionHistoryEntry[] }) {
+export function VersionHistory({
+  versions,
+  editable = false,
+  onRevert,
+}: {
+  versions: VersionHistoryEntry[];
+  /** Whether "Revert to this version" should be offered (only while the proposal is editable). */
+  editable?: boolean;
+  /** Loads a past version's content into the local editor draft — see ProposalWorkspace. */
+  onRevert?: (version: VersionHistoryEntry) => void;
+}) {
   const [inspecting, setInspecting] = useState<VersionHistoryEntry | null>(null);
 
   return (
@@ -39,9 +49,9 @@ export function VersionHistory({ versions }: { versions: VersionHistoryEntry[] }
               <TableHead>Version</TableHead>
               <TableHead>Time</TableHead>
               <TableHead>Change</TableHead>
-              <TableHead>Section</TableHead>
+              <TableHead>Sections</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">View</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -53,16 +63,25 @@ export function VersionHistory({ versions }: { versions: VersionHistoryEntry[] }
                 </TableCell>
                 <TableCell>{CHANGE_TYPE_LABELS[v.changeType]}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {v.changedSection ? SECTION_DISPLAY_LABELS[v.changedSection] : "—"}
+                  {v.changedSections.length > 0
+                    ? v.changedSections.map((s) => SECTION_DISPLAY_LABELS[s]).join(", ")
+                    : "—"}
                 </TableCell>
                 <TableCell className="flex flex-wrap gap-1">
                   {v.isCurrent ? <Badge variant="secondary">Current</Badge> : null}
                   {v.isApproved ? <Badge className="bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">Approved</Badge> : null}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setInspecting(v)}>
-                    View
-                  </Button>
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => setInspecting(v)}>
+                      View
+                    </Button>
+                    {editable && !v.isCurrent && onRevert ? (
+                      <Button variant="ghost" size="sm" onClick={() => onRevert(v)}>
+                        Revert
+                      </Button>
+                    ) : null}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -76,6 +95,20 @@ export function VersionHistory({ versions }: { versions: VersionHistoryEntry[] }
             <DialogTitle>Version {inspecting?.versionNumber}</DialogTitle>
           </DialogHeader>
           <pre className="whitespace-pre-wrap text-sm">{inspecting ? buildProposalText(inspecting.snapshot) : null}</pre>
+          {editable && inspecting && !inspecting.isCurrent && onRevert ? (
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  onRevert(inspecting);
+                  setInspecting(null);
+                }}
+              >
+                Revert to this version
+              </Button>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </>

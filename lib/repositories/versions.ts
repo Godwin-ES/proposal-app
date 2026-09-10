@@ -12,11 +12,11 @@ import { DomainError, mapRpcError } from "@/lib/domain/errors";
 type VersionRowBase = Database["public"]["Tables"]["proposal_versions"]["Row"];
 export type VersionRow = Omit<
   VersionRowBase,
-  "change_type" | "pdf_status" | "changed_section" | "snapshot" | "clarification_flags"
+  "change_type" | "pdf_status" | "changed_sections" | "snapshot" | "clarification_flags"
 > & {
   change_type: ProposalChangeType;
   pdf_status: "not_generated" | "generating" | "ready" | "failed";
-  changed_section: ChangedSectionLabel | null;
+  changed_sections: ChangedSectionLabel[];
   snapshot: ProposalSnapshot;
   clarification_flags: ClarificationFlag[];
 };
@@ -29,7 +29,7 @@ export async function createProposalVersion(
     snapshot: ProposalSnapshot;
     contentHash: string;
     changeType: ProposalChangeType;
-    changedSection: ChangedSectionLabel | null;
+    changedSections: ChangedSectionLabel[];
     revisionInstruction: string | null;
     clarificationFlags: ClarificationFlag[];
     nextStatus: "draft" | "needs_clarification";
@@ -38,14 +38,14 @@ export async function createProposalVersion(
   const { data, error } = await supabase
     .rpc("create_proposal_version", {
       p_proposal_id: input.proposalId,
-      // The generated Args type says `string` for these three, but the SQL
-      // params are nullable (uuid/text with no NOT NULL constraint) — the
-      // type generator can't see nullability for function arguments.
+      // The generated Args type says `string` for this, but the SQL param
+      // is nullable (uuid with no NOT NULL constraint) — the type generator
+      // can't see nullability for function arguments.
       p_expected_current_version_id: input.expectedCurrentVersionId as unknown as string,
       p_snapshot: input.snapshot as never,
       p_content_hash: input.contentHash,
       p_change_type: input.changeType,
-      p_changed_section: input.changedSection as unknown as string,
+      p_changed_sections: input.changedSections,
       p_revision_instruction: input.revisionInstruction as unknown as string,
       p_clarification_flags: input.clarificationFlags as never,
       p_next_status: input.nextStatus,
@@ -84,7 +84,7 @@ export async function dismissClarificationFlag(
 export type VersionChangeSummary = {
   versionNumber: number;
   changeType: ProposalChangeType;
-  changedSection: ChangedSectionLabel | null;
+  changedSections: ChangedSectionLabel[];
   createdAt: string;
 };
 
@@ -102,7 +102,7 @@ export async function listVersionChangesForApprover(
   return (data ?? []).map((row) => ({
     versionNumber: row.version_number,
     changeType: row.change_type as ProposalChangeType,
-    changedSection: row.changed_section as ChangedSectionLabel | null,
+    changedSections: (row.changed_sections ?? []) as ChangedSectionLabel[],
     createdAt: row.created_at,
   }));
 }

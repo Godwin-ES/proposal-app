@@ -266,7 +266,7 @@ export type Database = {
       proposal_versions: {
         Row: {
           change_type: string
-          changed_section: string | null
+          changed_sections: string[]
           clarification_flags: Json
           content_hash: string
           created_at: string
@@ -284,7 +284,7 @@ export type Database = {
         }
         Insert: {
           change_type: string
-          changed_section?: string | null
+          changed_sections?: string[]
           clarification_flags?: Json
           content_hash: string
           created_at?: string
@@ -302,7 +302,7 @@ export type Database = {
         }
         Update: {
           change_type?: string
-          changed_section?: string | null
+          changed_sections?: string[]
           clarification_flags?: Json
           content_hash?: string
           created_at?: string
@@ -501,7 +501,7 @@ export type Database = {
         Args: { p_proposal_id: string; p_version_id: string; p_flag_id: string }
         Returns: {
           change_type: string
-          changed_section: string | null
+          changed_sections: string[]
           clarification_flags: Json
           content_hash: string
           created_at: string
@@ -527,7 +527,7 @@ export type Database = {
       create_proposal_version: {
         Args: {
           p_change_type: string
-          p_changed_section: string
+          p_changed_sections: string[]
           p_clarification_flags: Json
           p_content_hash: string
           p_expected_current_version_id: string
@@ -538,7 +538,7 @@ export type Database = {
         }
         Returns: {
           change_type: string
-          changed_section: string | null
+          changed_sections: string[]
           clarification_flags: Json
           content_hash: string
           created_at: string
@@ -566,7 +566,7 @@ export type Database = {
         Returns: {
           version_number: number
           change_type: string
-          changed_section: string | null
+          changed_sections: string[]
           created_at: string
         }[]
       }
@@ -694,7 +694,7 @@ export type Database = {
         }
         Returns: {
           change_type: string
-          changed_section: string | null
+          changed_sections: string[]
           clarification_flags: Json
           content_hash: string
           created_at: string

@@ -5,6 +5,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import * as proposalsRepo from "@/lib/repositories/proposals";
 import * as materialsRepo from "@/lib/repositories/materials";
 import type { CurrentUser } from "@/lib/auth/current-user";
+import { salesTestAccount, hasTestAccountCredentials } from "@/tests/helpers/test-accounts";
 
 const mockGenerate = vi.fn();
 const mockRegenerateSection = vi.fn();
@@ -18,7 +19,7 @@ const { generateInitialDraft, regenerateSection } = await import("@/lib/ai/servi
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY);
+const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY) && hasTestAccountCredentials();
 
 const VALID_AI_RESULT = {
   data: {
@@ -47,8 +48,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
     admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: "sales.demo@koyatalent.test",
-      password: "DemoSales123!",
+      ...salesTestAccount(),
     });
     if (error) throw error;
     user = { userId: data.user!.id, email: data.user!.email!, fullName: "Sam Rep", role: "salesperson" };
@@ -193,8 +193,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: "sales.demo@koyatalent.test",
-      password: "DemoSales123!",
+      ...salesTestAccount(),
     });
     if (error) throw error;
     user = { userId: data.user!.id, email: data.user!.email!, fullName: "Sam Rep", role: "salesperson" };
@@ -257,7 +256,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     const v2 = await regenerateSection(supabase, proposalId, version.id, "deliverables", "Add a second deliverable.", "anthropic", user);
 
     expect(v2.version_number).toBe(2);
-    expect(v2.changed_section).toBe("deliverables");
+    expect(v2.changed_sections).toEqual(["deliverables"]);
     expect(v2.snapshot.content.deliverables).toEqual(["New deliverable A", "New deliverable B"]);
     expect(v2.snapshot.content.introduction).toBe(version.snapshot.content.introduction);
     expect(v2.snapshot.content.projectScope).toBe(version.snapshot.content.projectScope);

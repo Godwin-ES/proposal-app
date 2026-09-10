@@ -91,7 +91,7 @@ export async function generateInitialDraft(
       snapshot,
       contentHash,
       changeType: "initial_generation",
-      changedSection: null,
+      changedSections: [],
       revisionInstruction: null,
       clarificationFlags,
       nextStatus,
@@ -192,7 +192,7 @@ export async function regenerateSection(
   const previousFlags = (baseVersion.clarification_flags as ClarificationFlag[] | null) ?? [];
   const clarificationFlags = carryForwardClarificationFlags(
     previousFlags,
-    targetSection,
+    [targetSection],
     withFlagIds(aiResult.data.clarificationFlags)
   );
   const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
@@ -205,7 +205,7 @@ export async function regenerateSection(
       snapshot: newSnapshot,
       contentHash,
       changeType: "section_regeneration",
-      changedSection: targetSection,
+      changedSections: [targetSection],
       revisionInstruction: instruction,
       clarificationFlags,
       nextStatus,

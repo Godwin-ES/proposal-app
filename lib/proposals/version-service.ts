@@ -25,7 +25,7 @@ export async function saveManualRevision(
   expectedVersionId: string,
   snapshot: ProposalSnapshot,
   user: CurrentUser,
-  changedSection: ChangedSectionLabel | null = null
+  changedSections: ChangedSectionLabel[] = []
 ): Promise<VersionRow> {
   const proposal = await getProposalForOwner(supabase, proposalId, user);
   assertVersionWritableStatus(proposal.status);
@@ -42,14 +42,13 @@ export async function saveManualRevision(
 
   // Only the AI-regeneratable sections can carry a clarification flag, so
   // only editing one of those can resolve one — a Next Steps/Timeline/
-  // Pricing/Client Details edit still records `changedSection` for history
+  // Pricing/Client Details edit still records `changedSections` for history
   // below, but must not silently clear an unrelated flag.
-  const resolvedSection: ProposalSectionKey | null =
-    changedSection && (PROPOSAL_SECTION_KEYS as string[]).includes(changedSection)
-      ? (changedSection as ProposalSectionKey)
-      : null;
+  const resolvedSections = changedSections.filter((s): s is ProposalSectionKey =>
+    (PROPOSAL_SECTION_KEYS as string[]).includes(s)
+  );
   const previousFlags = (await getVersion(supabase, expectedVersionId)).clarification_flags as ClarificationFlag[];
-  const clarificationFlags = carryForwardClarificationFlags(previousFlags, resolvedSection);
+  const clarificationFlags = carryForwardClarificationFlags(previousFlags, resolvedSections);
 
   const approvalBlockers = evaluateApprovalReadiness({ snapshot: parsed.data, hasCurrentVersion: true });
   const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
@@ -61,7 +60,7 @@ export async function saveManualRevision(
     snapshot: parsed.data,
     contentHash,
     changeType: "manual_edit",
-    changedSection,
+    changedSections,
     revisionInstruction: null,
     clarificationFlags,
     nextStatus,

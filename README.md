@@ -58,6 +58,8 @@ Requires Node 20+ and pnpm.
 | `RESEND_API_KEY` | Yes | Delivery email |
 | `EMAIL_FROM` | Yes | Supports `"Display Name <address>"` format |
 | `RESEND_SANDBOX_RECIPIENT` | Optional | Redirects every send to one inbox at the provider boundary only — the UI, delivery history, and readiness checks still show the real client email untouched. Useful on Resend's sandbox sender, which can only deliver to the account's own address anyway. |
+| `TEST_SALES_EMAIL` / `TEST_SALES_PASSWORD` | Local dev/tests only | Credentials for a salesperson demo account, used by the integration and e2e suites. Never commit real credentials — set locally in `.env.local`. |
+| `TEST_APPROVER_EMAIL` / `TEST_APPROVER_PASSWORD` | Local dev/tests only | Credentials for an approver demo account, used by the integration and e2e suites. Never commit real credentials — set locally in `.env.local`. |
 
 ## Tests
 

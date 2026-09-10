@@ -25,12 +25,18 @@ export function RegenerateSectionDialog({
   targetSection,
   sectionLabel,
   materialCount,
+  disabled,
+  disabledReason,
 }: {
   proposalId: string;
   versionId: string;
   targetSection: ProposalSectionKey;
   sectionLabel: string;
   materialCount: number;
+  /** Disables the trigger — e.g. while there are unsaved local edits that a
+   * regeneration's page refresh would otherwise silently discard. */
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
@@ -53,9 +59,15 @@ export function RegenerateSectionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Regenerate ${sectionLabel}`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Regenerate ${sectionLabel}`}
+          disabled={disabled}
+          title={disabled ? disabledReason : undefined}
+        >
           <Sparkles className="size-4" />
         </Button>
       </DialogTrigger>

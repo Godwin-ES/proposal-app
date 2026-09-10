@@ -10,12 +10,13 @@ import * as proposalsRepo from "@/lib/repositories/proposals";
 import * as materialsRepo from "@/lib/repositories/materials";
 import * as materialsService from "@/lib/materials/service";
 import type { CurrentUser } from "@/lib/auth/current-user";
+import { salesTestAccount, hasTestAccountCredentials } from "@/tests/helpers/test-accounts";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY);
+const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY) && hasTestAccountCredentials();
 
 describe.skipIf(!hasCredentials)("supporting material pipeline (hosted Supabase integration)", () => {
   let supabase: SupabaseClient<Database>;
@@ -32,8 +33,7 @@ describe.skipIf(!hasCredentials)("supporting material pipeline (hosted Supabase 
     });
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: "sales.demo@koyatalent.test",
-      password: "DemoSales123!",
+      ...salesTestAccount(),
     });
     if (error) throw error;
 

@@ -15,7 +15,7 @@ export function withFlagIds(raw: AIClarificationFlag[]): ClarificationFlag[] {
 
 /**
  * Computes the next version's clarification flags from the previous
- * version's, given which section (if any) this edit/regeneration just
+ * version's, given which sections (if any) this edit/regeneration just
  * addressed. A section-tagged flag clears automatically the moment its own
  * section is touched — every other flag carries forward untouched, instead
  * of the old behaviour of wiping the whole array on any edit. Flags with no
@@ -25,9 +25,12 @@ export function withFlagIds(raw: AIClarificationFlag[]): ClarificationFlag[] {
  */
 export function carryForwardClarificationFlags(
   previousFlags: ClarificationFlag[],
-  changedSection: ProposalSectionKey | null,
+  changedSections: ProposalSectionKey[],
   freshFlags: ClarificationFlag[] = []
 ): ClarificationFlag[] {
-  const carried = changedSection ? previousFlags.filter((f) => f.section !== changedSection) : previousFlags;
+  const carried =
+    changedSections.length > 0
+      ? previousFlags.filter((f) => f.section === null || !changedSections.includes(f.section))
+      : previousFlags;
   return [...carried, ...freshFlags];
 }

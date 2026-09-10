@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { completeIntake } from "../fixtures/complete-intake";
+import { salesTestAccount, approverTestAccount } from "../helpers/test-accounts";
 
 /**
  * Covers the major Week 3 user journey end to end against a real running app,
@@ -14,10 +15,8 @@ import { completeIntake } from "../fixtures/complete-intake";
  * not part of this repo).
  */
 
-const SALES_EMAIL = "sales.demo@koyatalent.test";
-const SALES_PASSWORD = "DemoSales123!";
-const APPROVER_EMAIL = "approver.demo@koyatalent.test";
-const APPROVER_PASSWORD = "DemoApprover123!";
+const { email: SALES_EMAIL, password: SALES_PASSWORD } = salesTestAccount();
+const { email: APPROVER_EMAIL, password: APPROVER_PASSWORD } = approverTestAccount();
 
 async function login(page: Page, email: string, password: string) {
   await page.goto("/login");

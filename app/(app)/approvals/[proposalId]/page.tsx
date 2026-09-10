@@ -47,6 +47,21 @@ export default async function ApprovalReviewPage({
         review is read-only.
       </p>
 
+      <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="text-muted-foreground">Date of call</dt>
+          <dd>{snapshot.client.dateOfCall || "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Client email</dt>
+          <dd>{proposal.client_email || "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Salesperson</dt>
+          <dd>{snapshot.client.salespersonName}</dd>
+        </div>
+      </dl>
+
       {!isPending && latestDecision ? (
         <div className="rounded-md border bg-muted/40 p-4 text-sm">
           <p className="font-medium">
@@ -81,7 +96,9 @@ export default async function ApprovalReviewPage({
                       : change.changeType === "manual_edit"
                         ? "manually edited"
                         : "generated"}
-                    {change.changedSection ? `: ${SECTION_DISPLAY_LABELS[change.changedSection]}` : ""}
+                    {change.changedSections.length > 0
+                      ? `: ${change.changedSections.map((s) => SECTION_DISPLAY_LABELS[s]).join(", ")}`
+                      : ""}
                   </li>
                 ))}
               </ul>

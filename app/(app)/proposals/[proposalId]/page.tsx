@@ -127,7 +127,7 @@ export default async function ProposalPage({
         versionNumber: v.version_number,
         createdAt: v.created_at,
         changeType: v.change_type,
-        changedSection: v.changed_section,
+        changedSections: v.changed_sections,
         snapshot: v.snapshot,
         isCurrent: v.id === proposal.current_version_id,
         isApproved: approvedVersionIds.has(v.id),

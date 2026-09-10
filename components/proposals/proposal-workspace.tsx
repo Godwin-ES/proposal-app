@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -30,8 +30,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Pencil, Send, X } from "lucide-react";
-import type { ChangedSectionLabel, ClarificationFlag, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
+import type { ClarificationFlag, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
 import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
+import { diffChangedSections } from "@/lib/domain/snapshot-diff";
 
 export function ProposalWorkspace({
   proposalId,
@@ -68,6 +69,36 @@ export function ProposalWorkspace({
 }) {
   const router = useRouter();
   const [submitting, startSubmitTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
+
+  // Local, unsaved editing buffer — edits to any section update this only;
+  // nothing reaches the database until "Save Version" is clicked, so
+  // several sections can be changed and recorded as a single version
+  // instead of one version per field. Reset whenever the persisted current
+  // version actually changes (a real save, a regeneration, or a revision
+  // requested elsewhere) — not on every server refresh, so an in-flight
+  // draft survives e.g. saving the client email separately. Adjusted during
+  // render (React's "reset state on prop change" pattern) rather than in an
+  // effect, which would cause an extra render pass.
+  const [renderedVersionId, setRenderedVersionId] = useState(versionId);
+  const [draft, setDraft] = useState(snapshot);
+  if (versionId !== renderedVersionId) {
+    setRenderedVersionId(versionId);
+    setDraft(snapshot);
+  }
+
+  const dirtySections = diffChangedSections(snapshot, draft);
+  const isDirty = dirtySections.length > 0;
+
+  useEffect(() => {
+    if (!isDirty) return;
+    function handler(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   function handleSubmitForApproval() {
     startSubmitTransition(async () => {
@@ -81,15 +112,38 @@ export function ProposalWorkspace({
     });
   }
 
-  async function saveSnapshot(next: ProposalSnapshot, changedSection: ChangedSectionLabel | null = null): Promise<boolean> {
-    const result = await saveManualRevisionAction(proposalId, versionId, next, changedSection);
+  /** Updates the local draft only — does not touch the database. Matches the
+   * `(value) => Promise<boolean>` contract every section editor already
+   * expects, so those components need no changes. */
+  async function updateDraft(next: ProposalSnapshot): Promise<boolean> {
+    setDraft(next);
+    return true;
+  }
+
+  async function handleSaveVersion() {
+    setSaving(true);
+    const result = await saveManualRevisionAction(proposalId, versionId, draft, dirtySections);
+    setSaving(false);
     if (result.ok) {
-      toast.success("Proposal updated.");
+      toast.success(
+        dirtySections.length === 1
+          ? `${SECTION_DISPLAY_LABELS[dirtySections[0]]} saved.`
+          : `Saved ${dirtySections.length} changed sections.`
+      );
       router.refresh();
-      return true;
+    } else {
+      toast.error(result.error.message);
     }
-    toast.error(result.error.message);
-    return false;
+  }
+
+  function handleDiscardDraft() {
+    setDraft(snapshot);
+    toast.info("Unsaved changes discarded.");
+  }
+
+  function handleRevert(version: VersionHistoryEntry) {
+    setDraft(version.snapshot);
+    toast.info(`Loaded v${version.versionNumber} — review below and Save Version to apply.`);
   }
 
   async function dismissFlag(flagId: string) {
@@ -121,11 +175,13 @@ export function ProposalWorkspace({
     );
   }
 
+  const regenerateDisabledReason = isDirty ? "Save or discard your unsaved changes first." : undefined;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pb-20">
       <ProposalHeader
-        clientName={snapshot.client.clientName}
-        companyName={snapshot.client.companyName}
+        clientName={draft.client.clientName}
+        companyName={draft.client.companyName}
         status={status}
         versionNumber={versionNumber}
         ownerName={ownerName}
@@ -180,6 +236,7 @@ export function ProposalWorkspace({
             ? [
                 ...(changeRequest ? ["Revise this version based on the approver's notes above"] : []),
                 ...(clarificationFlags.length > 0 ? ["Resolve or dismiss the AI's flagged concerns above"] : []),
+                ...(isDirty ? ["Save or discard your unsaved changes before submitting"] : []),
                 ...approvalBlockers,
               ]
             : []
@@ -198,7 +255,7 @@ export function ProposalWorkspace({
         <div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button disabled={submitting}>
+              <Button disabled={submitting || isDirty} title={isDirty ? "Save or discard your unsaved changes first." : undefined}>
                 <Send className="size-4" /> Submit for Approval
               </Button>
             </AlertDialogTrigger>
@@ -223,9 +280,9 @@ export function ProposalWorkspace({
         <h2 className="text-lg font-medium">Client Details</h2>
         {editable ? (
           <ProposalDetailsEditor
-            client={snapshot.client}
+            client={draft.client}
             clientEmail={clientEmail}
-            onSave={(client) => saveSnapshot({ ...snapshot, client }, "clientDetails")}
+            onSave={(client) => updateDraft({ ...draft, client })}
             onSaveEmail={saveClientEmail}
           />
         ) : null}
@@ -233,12 +290,10 @@ export function ProposalWorkspace({
 
       <InlineSectionCard
         title="Introduction"
-        value={snapshot.content.introduction}
-        displayContent={snapshot.content.introduction}
+        value={draft.content.introduction}
+        displayContent={draft.content.introduction}
         editable={editable}
-        onSave={(value) =>
-          saveSnapshot({ ...snapshot, content: { ...snapshot.content, introduction: value } }, "introduction")
-        }
+        onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, introduction: value } })}
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
@@ -246,18 +301,18 @@ export function ProposalWorkspace({
             targetSection="introduction"
             sectionLabel="Introduction"
             materialCount={materialCount}
+            disabled={isDirty}
+            disabledReason={regenerateDisabledReason}
           />
         }
       />
 
       <InlineSectionCard
         title="Project Scope"
-        value={snapshot.content.projectScope}
-        displayContent={snapshot.content.projectScope}
+        value={draft.content.projectScope}
+        displayContent={draft.content.projectScope}
         editable={editable}
-        onSave={(value) =>
-          saveSnapshot({ ...snapshot, content: { ...snapshot.content, projectScope: value } }, "projectScope")
-        }
+        onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, projectScope: value } })}
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
@@ -265,21 +320,18 @@ export function ProposalWorkspace({
             targetSection="projectScope"
             sectionLabel="Project Scope"
             materialCount={materialCount}
+            disabled={isDirty}
+            disabledReason={regenerateDisabledReason}
           />
         }
       />
 
       <InlineSectionCard
         title="Recommended Approach"
-        value={snapshot.content.recommendedApproach}
-        displayContent={snapshot.content.recommendedApproach}
+        value={draft.content.recommendedApproach}
+        displayContent={draft.content.recommendedApproach}
         editable={editable}
-        onSave={(value) =>
-          saveSnapshot(
-            { ...snapshot, content: { ...snapshot.content, recommendedApproach: value } },
-            "recommendedApproach"
-          )
-        }
+        onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, recommendedApproach: value } })}
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
@@ -287,16 +339,18 @@ export function ProposalWorkspace({
             targetSection="recommendedApproach"
             sectionLabel="Recommended Approach"
             materialCount={materialCount}
+            disabled={isDirty}
+            disabledReason={regenerateDisabledReason}
           />
         }
       />
 
       <InlineSectionCard
         title="Deliverables"
-        value={snapshot.content.deliverables.join("\n")}
+        value={draft.content.deliverables.join("\n")}
         displayContent={
           <ul className="list-disc pl-5">
-            {snapshot.content.deliverables.map((item, i) => (
+            {draft.content.deliverables.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
@@ -304,19 +358,16 @@ export function ProposalWorkspace({
         description="One deliverable per line."
         editable={editable}
         onSave={(value) =>
-          saveSnapshot(
-            {
-              ...snapshot,
-              content: {
-                ...snapshot.content,
-                deliverables: value
-                  .split("\n")
-                  .map((line) => line.trim())
-                  .filter(Boolean),
-              },
+          updateDraft({
+            ...draft,
+            content: {
+              ...draft.content,
+              deliverables: value
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean),
             },
-            "deliverables"
-          )
+          })
         }
         extraActions={
           <RegenerateSectionDialog
@@ -325,6 +376,8 @@ export function ProposalWorkspace({
             targetSection="deliverables"
             sectionLabel="Deliverables"
             materialCount={materialCount}
+            disabled={isDirty}
+            disabledReason={regenerateDisabledReason}
           />
         }
       />
@@ -332,34 +385,30 @@ export function ProposalWorkspace({
       <div className="grid gap-4 sm:grid-cols-2">
         <ProposalSectionCard
           title="Timeline"
-          content={snapshot.content.timeline}
+          content={draft.content.timeline}
           actions={
             editable ? (
               <ProposalEditorDialog
                 trigger={editButton("Timeline")}
                 title="Edit Timeline"
-                initialValue={snapshot.content.timeline}
+                initialValue={draft.content.timeline}
                 renderInput={(value, onChange) => <TimelineInput value={value} onChange={onChange} />}
-                onSave={(value) =>
-                  saveSnapshot({ ...snapshot, content: { ...snapshot.content, timeline: value } }, "timeline")
-                }
+                onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, timeline: value } })}
               />
             ) : null
           }
         />
         <ProposalSectionCard
           title="Pricing"
-          content={snapshot.content.pricing}
+          content={draft.content.pricing}
           actions={
             editable ? (
               <ProposalEditorDialog
                 trigger={editButton("Pricing")}
                 title="Edit Pricing"
-                initialValue={snapshot.content.pricing}
+                initialValue={draft.content.pricing}
                 renderInput={(value, onChange) => <PricingInput value={value} onChange={onChange} />}
-                onSave={(value) =>
-                  saveSnapshot({ ...snapshot, content: { ...snapshot.content, pricing: value } }, "pricing")
-                }
+                onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, pricing: value } })}
               />
             ) : null
           }
@@ -368,18 +417,40 @@ export function ProposalWorkspace({
 
       <InlineSectionCard
         title="Next Steps"
-        value={snapshot.content.nextSteps}
-        displayContent={snapshot.content.nextSteps}
+        value={draft.content.nextSteps}
+        displayContent={draft.content.nextSteps}
         editable={editable}
-        onSave={(value) =>
-          saveSnapshot({ ...snapshot, content: { ...snapshot.content, nextSteps: value } }, "nextSteps")
-        }
+        onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, nextSteps: value } })}
       />
 
       <div>
         <h2 className="mb-3 text-lg font-medium">Version History</h2>
-        <VersionHistory versions={versions} />
+        <VersionHistory versions={versions} editable={editable} onRevert={handleRevert} />
       </div>
+
+      {isDirty ? (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <p className="text-sm">
+              <span className="font-medium">
+                {dirtySections.length} unsaved change{dirtySections.length === 1 ? "" : "s"}
+              </span>
+              <span className="text-muted-foreground">
+                {" "}
+                ({dirtySections.map((s) => SECTION_DISPLAY_LABELS[s]).join(", ")})
+              </span>
+            </p>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={handleDiscardDraft} disabled={saving}>
+                Discard
+              </Button>
+              <Button size="sm" onClick={handleSaveVersion} disabled={saving}>
+                {saving ? "Saving..." : "Save Version"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

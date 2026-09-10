@@ -52,12 +52,12 @@ export async function saveManualRevisionAction(
   proposalId: string,
   expectedVersionId: string,
   snapshot: ProposalSnapshot,
-  changedSection: ChangedSectionLabel | null = null
+  changedSections: ChangedSectionLabel[] = []
 ): Promise<ActionResult<{ versionId: string }>> {
   try {
     const user = await requireSalesperson();
     const supabase = await createSupabaseServerClient();
-    const version = await saveManualRevision(supabase, proposalId, expectedVersionId, snapshot, user, changedSection);
+    const version = await saveManualRevision(supabase, proposalId, expectedVersionId, snapshot, user, changedSections);
     revalidatePath(`/proposals/${proposalId}`);
     return { ok: true, data: { versionId: version.id } };
   } catch (error) {

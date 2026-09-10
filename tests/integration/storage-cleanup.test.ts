@@ -10,11 +10,12 @@ import type { Database } from "@/lib/supabase/database.types";
 import * as proposalsRepo from "@/lib/repositories/proposals";
 import { SUPPORTING_MATERIAL_BUCKET } from "@/lib/repositories/materials";
 import { removeProposalStorage } from "@/lib/storage/cleanup";
+import { salesTestAccount, hasTestAccountCredentials } from "@/tests/helpers/test-accounts";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY);
+const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY) && hasTestAccountCredentials();
 
 describe.skipIf(!hasCredentials)("removeProposalStorage (hosted Supabase integration)", () => {
   let supabase: SupabaseClient<Database>;
@@ -27,8 +28,7 @@ describe.skipIf(!hasCredentials)("removeProposalStorage (hosted Supabase integra
     admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: "sales.demo@koyatalent.test",
-      password: "DemoSales123!",
+      ...salesTestAccount(),
     });
     if (error) throw error;
     userId = data.user!.id;
