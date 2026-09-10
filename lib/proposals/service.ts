@@ -49,6 +49,28 @@ export async function updateClientEmail(supabase: SupabaseClient<Database>, prop
   return proposalsRepo.updateClientEmail(supabase, proposalId, parsed.data);
 }
 
+export async function withdrawSubmission(
+  supabase: SupabaseClient<Database>,
+  user: CurrentUser,
+  proposalId: string
+) {
+  const proposal = await getProposalForOwner(supabase, proposalId, user);
+
+  if (proposal.status !== "pending_approval") {
+    throw new DomainError(
+      "INVALID_STATE",
+      "withdraw-submission",
+      `Only a proposal pending approval can be withdrawn (status: ${proposal.status}).`,
+      false
+    );
+  }
+  if (!proposal.current_version_id) {
+    throw new DomainError("INVALID_STATE", "withdraw-submission", "There is no submitted version to withdraw.", false);
+  }
+
+  return proposalsRepo.withdrawSubmission(supabase, proposalId, proposal.current_version_id);
+}
+
 export async function deleteDraftProposal(
   supabase: SupabaseClient<Database>,
   user: CurrentUser,

@@ -4,7 +4,12 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { saveManualRevisionAction, updateClientEmailAction, dismissClarificationFlagAction } from "@/actions/proposals";
+import {
+  saveManualRevisionAction,
+  updateClientEmailAction,
+  dismissClarificationFlagAction,
+  withdrawSubmissionAction,
+} from "@/actions/proposals";
 import { submitForApprovalAction } from "@/actions/approvals";
 import { ProposalHeader } from "@/components/proposals/proposal-header";
 import { LocalDateTime } from "@/components/shared/local-datetime";
@@ -69,6 +74,7 @@ export function ProposalWorkspace({
 }) {
   const router = useRouter();
   const [submitting, startSubmitTransition] = useTransition();
+  const [withdrawing, startWithdrawTransition] = useTransition();
   const [saving, setSaving] = useState(false);
 
   // Local, unsaved editing buffer — edits to any section update this only;
@@ -105,6 +111,18 @@ export function ProposalWorkspace({
       const result = await submitForApprovalAction(proposalId, versionId);
       if (result.ok) {
         toast.success("Submitted for approval.");
+        router.refresh();
+      } else {
+        toast.error(result.error.message);
+      }
+    });
+  }
+
+  function handleWithdraw() {
+    startWithdrawTransition(async () => {
+      const result = await withdrawSubmissionAction(proposalId);
+      if (result.ok) {
+        toast.success("Submission withdrawn — back to Draft.");
         router.refresh();
       } else {
         toast.error(result.error.message);
@@ -248,6 +266,38 @@ export function ProposalWorkspace({
           <Button asChild variant="secondary">
             <Link href={`/delivery/${proposalId}`}>Go to Delivery</Link>
           </Button>
+        </div>
+      ) : null}
+
+      {status === "pending_approval" ? (
+        <div className="rounded-md border bg-muted/40 p-4 text-sm">
+          <p className="font-medium">Awaiting approval</p>
+          <p className="mt-1 text-muted-foreground">
+            This proposal is read-only until the approver decides. Submitted the wrong version, or need to fix
+            something first? You can withdraw it back to Draft as long as no decision has been made yet.
+          </p>
+          <div className="mt-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="secondary" disabled={withdrawing}>
+                  Withdraw Submission
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Withdraw this submission?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This returns the proposal to Draft so you can make changes and resubmit. Nothing in its version
+                    history is lost.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleWithdraw}>Withdraw</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       ) : null}
 

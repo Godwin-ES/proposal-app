@@ -28,10 +28,12 @@ export default async function ApprovalReviewPage({
     throw error;
   }
 
-  const { proposal, version, decisions, changesSinceLastReview } = review;
+  const { proposal, version, decisions, changesSinceLastReview, reviewContext } = review;
   const { snapshot } = version;
   const isPending = proposal.status === "pending_approval";
   const latestDecision = decisions[0] ?? null;
+  const groundedSections = reviewContext.sections.filter((s) => s.grounded);
+  const previousFeedback = decisions.filter((d) => d.comments);
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,6 +112,66 @@ export default async function ApprovalReviewPage({
           )}
         </div>
       ) : null}
+
+      <Card>
+        <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
+          <div>
+            <p className="font-medium">Sources used</p>
+            {reviewContext.sourcesUsed.length > 0 ? (
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                {reviewContext.sourcesUsed.map((filename) => (
+                  <li key={filename}>{filename}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-muted-foreground">No supporting material was used.</p>
+            )}
+          </div>
+          <div>
+            <p className="font-medium">AI-grounded sections</p>
+            {groundedSections.length > 0 ? (
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                {groundedSections.map((s) => (
+                  <li key={s.section}>
+                    {SECTION_DISPLAY_LABELS[s.section]} — informed by {s.filenames.join(", ")}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-muted-foreground">No section was grounded in supporting material.</p>
+            )}
+          </div>
+          <div>
+            <p className="font-medium">Open clarification items</p>
+            {version.clarification_flags.length > 0 ? (
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                {version.clarification_flags.map((flag) => (
+                  <li key={flag.id}>
+                    {flag.section ? `${SECTION_DISPLAY_LABELS[flag.section]}: ` : ""}
+                    {flag.message}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-muted-foreground">None.</p>
+            )}
+          </div>
+          <div>
+            <p className="font-medium">Your previous feedback on this proposal</p>
+            {previousFeedback.length > 0 ? (
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                {previousFeedback.map((d) => (
+                  <li key={d.id}>
+                    <LocalDateTime value={d.created_at} />: &ldquo;{d.comments}&rdquo;
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-muted-foreground">None.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">

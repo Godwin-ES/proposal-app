@@ -141,3 +141,19 @@ export async function updateClientEmail(
   if (error) throw mapRpcError(error, "update-client-email");
   return data as ProposalRow;
 }
+
+export async function withdrawSubmission(
+  supabase: SupabaseClient<Database>,
+  proposalId: string,
+  expectedCurrentVersionId: string
+): Promise<ProposalRow> {
+  const { data, error } = await supabase
+    .rpc("withdraw_proposal_submission", {
+      p_proposal_id: proposalId,
+      p_expected_current_version_id: expectedCurrentVersionId,
+    })
+    .single();
+
+  if (error) throw mapRpcError(error, "withdraw-submission");
+  return data as ProposalRow;
+}

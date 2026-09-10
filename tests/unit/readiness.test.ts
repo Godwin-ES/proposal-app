@@ -58,9 +58,9 @@ describe("evaluateGenerationReadiness", () => {
     expect(blockers).toContain("Recommended Services / Deliverables");
   });
 
-  it("blocks generation when client email is missing", () => {
+  it("does not block generation when client email is missing (it's a delivery requirement, not a generation one)", () => {
     const blockers = evaluateGenerationReadiness({ ...completeIntake, clientEmail: "" });
-    expect(blockers).toContain("Client Email");
+    expect(blockers).not.toContain("Client Email");
   });
 
   it("blocks generation when proposed timeline is missing", () => {

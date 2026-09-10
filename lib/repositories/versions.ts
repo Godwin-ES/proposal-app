@@ -107,6 +107,26 @@ export async function listVersionChangesForApprover(
   }));
 }
 
+export async function getReviewMaterialsContext(
+  supabase: SupabaseClient<Database>,
+  proposalId: string
+): Promise<{
+  versions: { id: string; versionNumber: number; changeType: ProposalChangeType; changedSections: string[] }[];
+  generationRuns: { outputVersionId: string; materialUsage: { materialId: string; sections: string[]; factUsed: string }[] }[];
+  materials: { id: string; filename: string }[];
+}> {
+  const { data, error } = await supabase.rpc("get_review_materials_context", { p_proposal_id: proposalId });
+  if (error) throw mapRpcError(error, "review-materials-context");
+  return data as unknown as {
+    versions: { id: string; versionNumber: number; changeType: ProposalChangeType; changedSections: string[] }[];
+    generationRuns: {
+      outputVersionId: string;
+      materialUsage: { materialId: string; sections: string[]; factUsed: string }[];
+    }[];
+    materials: { id: string; filename: string }[];
+  };
+}
+
 export async function listVersionsForProposal(
   supabase: SupabaseClient<Database>,
   proposalId: string

@@ -356,6 +356,8 @@ export type Database = {
           salesperson_name: string
           status: string
           updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
         }
         Insert: {
           approval_submitted_at?: string | null
@@ -377,6 +379,8 @@ export type Database = {
           salesperson_name?: string
           status?: string
           updated_at?: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Update: {
           approval_submitted_at?: string | null
@@ -398,6 +402,8 @@ export type Database = {
           salesperson_name?: string
           status?: string
           updated_at?: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Relationships: [
           {
@@ -569,6 +575,10 @@ export type Database = {
           changed_sections: string[]
           created_at: string
         }[]
+      }
+      get_review_materials_context: {
+        Args: { p_proposal_id: string }
+        Returns: Json
       }
       current_role_is: { Args: { target_role: string }; Returns: boolean }
       decide_proposal_approval: {
@@ -811,6 +821,40 @@ export type Database = {
           salesperson_name: string
           status: string
           updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      withdraw_proposal_submission: {
+        Args: { p_proposal_id: string; p_expected_current_version_id: string }
+        Returns: {
+          approval_submitted_at: string | null
+          approval_submitted_by: string | null
+          client_email: string | null
+          client_name: string
+          client_needs_summary: string
+          company_name: string
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          date_of_call: string | null
+          estimated_pricing: string
+          goals_and_objectives: string
+          id: string
+          project_scope: string
+          proposed_timeline: string
+          recommended_services: string
+          salesperson_name: string
+          status: string
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
         }
         SetofOptions: {
           from: "*"

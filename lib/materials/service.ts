@@ -160,7 +160,29 @@ export async function removeMaterial(supabase: SupabaseClient<Database>, materia
   const proposal = await getProposalForOwner(supabase, material.proposal_id, user);
   assertEditableStatus(proposal.status);
 
-  await supabase.storage.from(materialsRepo.SUPPORTING_MATERIAL_BUCKET).remove([material.storage_path]);
+  // Fail-closed, same as lib/storage/cleanup.ts: an unconfirmed Storage
+  // removal must abort before the DB row is deleted, or the file becomes an
+  // invisible orphan with nothing left pointing at it.
+  const { data: removed, error } = await supabase.storage
+    .from(materialsRepo.SUPPORTING_MATERIAL_BUCKET)
+    .remove([material.storage_path]);
+  if (error) {
+    throw new DomainError(
+      "STORAGE_CLEANUP_FAILED",
+      "material-removal",
+      `Could not delete the file for this material: ${error.message}`,
+      true
+    );
+  }
+  if (!removed || removed.length < 1) {
+    throw new DomainError(
+      "STORAGE_CLEANUP_FAILED",
+      "material-removal",
+      "The file removal for this material was not confirmed.",
+      true
+    );
+  }
+
   await materialsRepo.deleteMaterial(supabase, materialId);
 }
 

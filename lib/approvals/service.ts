@@ -4,7 +4,8 @@ import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { getProposalForOwner } from "@/lib/proposals/service";
 import { getProposal } from "@/lib/repositories/proposals";
-import { getVersion, listVersionChangesForApprover } from "@/lib/repositories/versions";
+import { getVersion, listVersionChangesForApprover, getReviewMaterialsContext } from "@/lib/repositories/versions";
+import { computeReviewContext } from "@/lib/domain/material-attribution";
 import * as approvalsRepo from "@/lib/repositories/approvals";
 import * as proposalsRepo from "@/lib/repositories/proposals";
 import { evaluateApprovalReadiness } from "@/lib/domain/readiness";
@@ -103,5 +104,13 @@ export async function getApprovalReview(supabase: SupabaseClient<Database>, prop
         )
       : [];
 
-  return { proposal, version, decisions, changesSinceLastReview };
+  const materialsContext = await getReviewMaterialsContext(supabase, proposalId);
+  const reviewContext = computeReviewContext(
+    version.id,
+    materialsContext.versions,
+    materialsContext.generationRuns,
+    materialsContext.materials
+  );
+
+  return { proposal, version, decisions, changesSinceLastReview, reviewContext };
 }

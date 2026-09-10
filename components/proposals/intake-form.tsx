@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ type FieldConfig = {
   multiline?: boolean;
   required?: boolean;
   kind?: "timeline" | "pricing";
+  inputType?: string;
 };
 
 const CLIENT_INFO_FIELDS: FieldConfig[] = [
@@ -29,6 +30,7 @@ const CLIENT_INFO_FIELDS: FieldConfig[] = [
   { name: "companyName", label: "Company Name", required: true },
   { name: "dateOfCall", label: "Date of Call", required: true },
   { name: "salespersonName", label: "Salesperson Name", required: true },
+  { name: "clientEmail", label: "Client Email (delivery address)", inputType: "email" },
 ];
 
 const SECTIONS: { title: string; fields: FieldConfig[] }[] = [
@@ -65,8 +67,6 @@ export function IntakeForm({
   editable: boolean;
 }) {
   const [pending, startTransition] = useTransition();
-  const [emailPending, startEmailTransition] = useTransition();
-  const [clientEmail, setClientEmail] = useState(defaultValues.clientEmail);
 
   const {
     register,
@@ -89,22 +89,20 @@ export function IntakeForm({
 
   function onSubmit(values: ProposalIntake) {
     startTransition(async () => {
-      const result = await updateIntakeAction(proposalId, { ...values, clientEmail: defaultValues.clientEmail });
-      if (result.ok) {
+      // Client Email is delivery routing metadata rather than generated
+      // content, so it's still persisted through its own RPC internally —
+      // but from the user's perspective, one "Save Intake" click saves
+      // everything on this form, including email.
+      const [intakeResult, emailResult] = await Promise.all([
+        updateIntakeAction(proposalId, values),
+        updateClientEmailAction(proposalId, values.clientEmail),
+      ]);
+      if (!intakeResult.ok) {
+        toast.error(intakeResult.error.message);
+      } else if (!emailResult.ok) {
+        toast.error(emailResult.error.message);
+      } else {
         toast.success("Intake saved.");
-      } else {
-        toast.error(result.error.message);
-      }
-    });
-  }
-
-  function onSaveEmail() {
-    startEmailTransition(async () => {
-      const result = await updateClientEmailAction(proposalId, clientEmail);
-      if (result.ok) {
-        toast.success("Client email saved.");
-      } else {
-        toast.error(result.error.message);
       }
     });
   }
@@ -131,7 +129,7 @@ export function IntakeForm({
         ) : field.multiline ? (
           <Textarea id={field.name} disabled={!editable} rows={4} {...register(field.name)} />
         ) : (
-          <Input id={field.name} disabled={!editable} {...register(field.name)} />
+          <Input id={field.name} type={field.inputType} disabled={!editable} {...register(field.name)} />
         )}
         {errors[field.name] ? <p className="text-sm text-destructive">{errors[field.name]?.message as string}</p> : null}
       </div>
@@ -147,30 +145,6 @@ export function IntakeForm({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">{CLIENT_INFO_FIELDS.map(renderField)}</div>
-
-            <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end sm:gap-3">
-              <div className="flex flex-1 flex-col gap-2">
-                <Label htmlFor="clientEmail">
-                  Client Email (delivery address)
-                  <span className="text-destructive"> *</span>
-                </Label>
-                <Input
-                  id="clientEmail"
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  placeholder="client@company.com"
-                />
-              </div>
-              <Button type="button" onClick={onSaveEmail} disabled={emailPending} variant="secondary">
-                {emailPending ? "Saving..." : "Save Email"}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Saved separately from the rest of this form — click <strong>Save Email</strong> to store it.
-              Clicking Save Intake alone will not save this field, and it&apos;s required before you can generate
-              a draft.
-            </p>
           </CardContent>
         </Card>
 

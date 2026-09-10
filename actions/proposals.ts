@@ -48,6 +48,19 @@ export async function updateClientEmailAction(
   }
 }
 
+export async function withdrawSubmissionAction(proposalId: string): Promise<ActionResult<null>> {
+  try {
+    const user = await requireSalesperson();
+    const supabase = await createSupabaseServerClient();
+    await proposalService.withdrawSubmission(supabase, user, proposalId);
+    revalidatePath(`/proposals/${proposalId}`);
+    revalidatePath("/dashboard");
+    return { ok: true, data: null };
+  } catch (error) {
+    return { ok: false, error: toActionError(error, "withdraw-submission") };
+  }
+}
+
 export async function saveManualRevisionAction(
   proposalId: string,
   expectedVersionId: string,
