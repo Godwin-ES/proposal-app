@@ -36,7 +36,12 @@ export function NumberStepper({
         type="number"
         inputMode="numeric"
         min={min}
-        step={step}
+        // Deliberately not `step={step}` — the native HTML5 step constraint
+        // would reject any manually-typed value that doesn't land exactly on
+        // the min+n*step grid (e.g. typing "18500" with step=100), even
+        // though that's a perfectly valid price. `step` here only governs
+        // the +/- buttons below, not what a typed value is allowed to be.
+        step="any"
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(clamp(Number(e.target.value)))}
