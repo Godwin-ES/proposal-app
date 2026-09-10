@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FileWarning, FileCheck2, FileClock, Loader2, Trash2, RotateCw, Upload } from "lucide-react";
 import {
@@ -32,6 +33,7 @@ export function SupportingMaterialPanel({
   initialMaterials: MaterialSummary[];
   editable: boolean;
 }) {
+  const router = useRouter();
   const [materials, setMaterials] = useState(initialMaterials);
   const [uploading, setUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -75,7 +77,13 @@ export function SupportingMaterialPanel({
       if (!finalizeResult.ok) {
         toast.error(finalizeResult.error.message);
       } else {
-        toast.success(`${file.name} uploaded.`);
+        const { extractionStatus, warning } = finalizeResult.data;
+        setMaterials((prev) => prev.map((m) => (m.id === materialId ? { ...m, extractionStatus, warning } : m)));
+        toast.success(extractionStatus === "ready" ? `${file.name} uploaded.` : `${file.name} uploaded, but ${warning}`);
+        // Keeps server-computed state elsewhere on the page (generation
+        // readiness blockers, the "N supporting files" count shown next to
+        // Regenerate) in sync with a material that just became usable.
+        router.refresh();
       }
     } finally {
       setUploading(false);
@@ -88,7 +96,14 @@ export function SupportingMaterialPanel({
     startTransition(async () => {
       const result = await retryMaterialExtractionAction(proposalId, materialId);
       setBusyMaterialId(null);
-      if (!result.ok) toast.error(result.error.message);
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      const { extractionStatus, warning } = result.data;
+      setMaterials((prev) => prev.map((m) => (m.id === materialId ? { ...m, extractionStatus, warning } : m)));
+      if (extractionStatus === "ready") toast.success("Extraction succeeded.");
+      router.refresh();
     });
   }
 
@@ -99,6 +114,7 @@ export function SupportingMaterialPanel({
       setBusyMaterialId(null);
       if (result.ok) {
         setMaterials((prev) => prev.filter((m) => m.id !== materialId));
+        router.refresh();
       } else {
         toast.error(result.error.message);
       }

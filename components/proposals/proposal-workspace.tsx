@@ -19,6 +19,7 @@ import { InlineSectionCard } from "@/components/proposals/inline-section-card";
 import { ProposalEditorDialog } from "@/components/proposals/proposal-editor-dialog";
 import { ProposalDetailsEditor } from "@/components/proposals/proposal-details-editor";
 import { RegenerateSectionDialog } from "@/components/proposals/regenerate-section-dialog";
+import { SupportingMaterialPanel, type MaterialSummary } from "@/components/proposals/supporting-material-panel";
 import { TimelineInput } from "@/components/shared/timeline-input";
 import { PricingInput } from "@/components/shared/pricing-input";
 import { VersionHistory, type VersionHistoryEntry } from "@/components/proposals/version-history";
@@ -51,6 +52,8 @@ export function ProposalWorkspace({
   clarificationFlags,
   editable,
   versions,
+  materials,
+  materialsEditable,
   materialCount,
   canSubmitForApproval,
   changeRequest,
@@ -67,6 +70,8 @@ export function ProposalWorkspace({
   clarificationFlags: ClarificationFlag[];
   editable: boolean;
   versions: VersionHistoryEntry[];
+  materials: MaterialSummary[];
+  materialsEditable: boolean;
   materialCount: number;
   canSubmitForApproval: boolean;
   changeRequest: { comments: string | null; createdAt: string } | null;
@@ -345,6 +350,8 @@ export function ProposalWorkspace({
           />
         ) : null}
       </div>
+
+      <SupportingMaterialPanel proposalId={proposalId} initialMaterials={materials} editable={materialsEditable} />
 
       <InlineSectionCard
         title="Introduction"

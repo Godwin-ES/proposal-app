@@ -115,6 +115,14 @@ export default async function ProposalPage({
       clientEmail={intake.clientEmail}
       changeRequest={changeRequest ? { comments: changeRequest.comments, createdAt: changeRequest.created_at } : null}
       editable={isVersionWritableStatus(proposal.status)}
+      materials={materials.map((m) => ({
+        id: m.id,
+        filename: m.filename,
+        sizeBytes: m.size_bytes,
+        extractionStatus: m.extraction_status,
+        warning: m.warning,
+      }))}
+      materialsEditable={materialsEditable}
       materialCount={materials.filter((m) => m.extraction_status === "ready").length}
       canSubmitForApproval={
         isEditableStatus(proposal.status) &&

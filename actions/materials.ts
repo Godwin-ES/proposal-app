@@ -36,13 +36,19 @@ export async function prepareMaterialUploadAction(input: {
 export async function finalizeMaterialUploadAction(
   proposalId: string,
   materialId: string
-): Promise<ActionResult<null>> {
+): Promise<ActionResult<{ extractionStatus: "ready" | "failed"; warning: string | null }>> {
   try {
     const user = await requireSalesperson();
     const supabase = await createSupabaseServerClient();
-    await materialsService.finalizeMaterialUpload(supabase, materialId, user);
+    const material = await materialsService.finalizeMaterialUpload(supabase, materialId, user);
     revalidatePath(`/proposals/${proposalId}`);
-    return { ok: true, data: null };
+    // runExtraction always resolves to "ready" or "failed" — never leaves the
+    // row "pending" — but setMaterialExtractionResult's return type is the
+    // general MaterialRow shape, which can't reflect that narrower guarantee.
+    return {
+      ok: true,
+      data: { extractionStatus: material.extraction_status as "ready" | "failed", warning: material.warning },
+    };
   } catch (error) {
     return { ok: false, error: toActionError(error, "material-extraction") };
   }
@@ -51,13 +57,16 @@ export async function finalizeMaterialUploadAction(
 export async function retryMaterialExtractionAction(
   proposalId: string,
   materialId: string
-): Promise<ActionResult<null>> {
+): Promise<ActionResult<{ extractionStatus: "ready" | "failed"; warning: string | null }>> {
   try {
     const user = await requireSalesperson();
     const supabase = await createSupabaseServerClient();
-    await materialsService.retryMaterialExtraction(supabase, materialId, user);
+    const material = await materialsService.retryMaterialExtraction(supabase, materialId, user);
     revalidatePath(`/proposals/${proposalId}`);
-    return { ok: true, data: null };
+    return {
+      ok: true,
+      data: { extractionStatus: material.extraction_status as "ready" | "failed", warning: material.warning },
+    };
   } catch (error) {
     return { ok: false, error: toActionError(error, "material-extraction") };
   }
