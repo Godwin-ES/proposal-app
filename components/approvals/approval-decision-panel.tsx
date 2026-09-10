@@ -31,9 +31,11 @@ export function ApprovalDecisionPanel({
 }) {
   const [comments, setComments] = useState("");
   const [pending, startTransition] = useTransition();
+  const [decidingAction, setDecidingAction] = useState<"approved" | "changes_requested" | null>(null);
   const router = useRouter();
 
   function decide(decision: "approved" | "changes_requested") {
+    setDecidingAction(decision);
     startTransition(async () => {
       const result = await decideApprovalAction(proposalId, versionId, decision, comments);
       if (result.ok) {
@@ -41,6 +43,7 @@ export function ApprovalDecisionPanel({
         router.push("/approvals");
         router.refresh();
       } else {
+        setDecidingAction(null);
         toast.error(result.error.message);
       }
     });
@@ -60,12 +63,14 @@ export function ApprovalDecisionPanel({
         />
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => decide("changes_requested")} disabled={pending}>
-            <X className="size-4" /> Request Changes
+            <X className="size-4" />
+            {pending && decidingAction === "changes_requested" ? "Requesting Changes..." : "Request Changes"}
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button disabled={pending}>
-                <Check className="size-4" /> Approve Proposal
+                <Check className="size-4" />
+                {pending && decidingAction === "approved" ? "Approving..." : "Approve Proposal"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

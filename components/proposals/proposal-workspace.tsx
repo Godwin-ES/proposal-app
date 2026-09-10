@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Send, X } from "lucide-react";
+import { Loader2, Pencil, Send, X } from "lucide-react";
 import type { ClarificationFlag, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
 import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { diffChangedSections } from "@/lib/domain/snapshot-diff";
@@ -76,6 +76,7 @@ export function ProposalWorkspace({
   const [submitting, startSubmitTransition] = useTransition();
   const [withdrawing, startWithdrawTransition] = useTransition();
   const [saving, setSaving] = useState(false);
+  const [dismissingFlagId, setDismissingFlagId] = useState<string | null>(null);
 
   // Local, unsaved editing buffer — edits to any section update this only;
   // nothing reaches the database until "Save Version" is clicked, so
@@ -165,7 +166,9 @@ export function ProposalWorkspace({
   }
 
   async function dismissFlag(flagId: string) {
+    setDismissingFlagId(flagId);
     const result = await dismissClarificationFlagAction(proposalId, versionId, flagId);
+    setDismissingFlagId(null);
     if (result.ok) {
       toast.success("Flag dismissed.");
       router.refresh();
@@ -237,9 +240,14 @@ export function ProposalWorkspace({
                   size="icon-sm"
                   className="shrink-0 text-blue-800 hover:text-blue-900 dark:text-blue-300"
                   aria-label="Dismiss flag"
+                  disabled={dismissingFlagId === flag.id}
                   onClick={() => dismissFlag(flag.id)}
                 >
-                  <X className="size-3.5" />
+                  {dismissingFlagId === flag.id ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <X className="size-3.5" />
+                  )}
                 </Button>
               </li>
             ))}
@@ -280,7 +288,7 @@ export function ProposalWorkspace({
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="secondary" disabled={withdrawing}>
-                  Withdraw Submission
+                  {withdrawing ? "Withdrawing..." : "Withdraw Submission"}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -306,7 +314,7 @@ export function ProposalWorkspace({
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button disabled={submitting || isDirty} title={isDirty ? "Save or discard your unsaved changes first." : undefined}>
-                <Send className="size-4" /> Submit for Approval
+                <Send className="size-4" /> {submitting ? "Submitting..." : "Submit for Approval"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

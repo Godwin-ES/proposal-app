@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { FileWarning, FileCheck2, FileClock, Trash2, RotateCw, Upload } from "lucide-react";
+import { FileWarning, FileCheck2, FileClock, Loader2, Trash2, RotateCw, Upload } from "lucide-react";
 import {
   prepareMaterialUploadAction,
   finalizeMaterialUploadAction,
@@ -34,7 +34,8 @@ export function SupportingMaterialPanel({
 }) {
   const [materials, setMaterials] = useState(initialMaterials);
   const [uploading, setUploading] = useState(false);
-  const [pendingId, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const [busyMaterialId, setBusyMaterialId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFileSelected(file: File) {
@@ -83,15 +84,19 @@ export function SupportingMaterialPanel({
   }
 
   function handleRetry(materialId: string) {
+    setBusyMaterialId(materialId);
     startTransition(async () => {
       const result = await retryMaterialExtractionAction(proposalId, materialId);
+      setBusyMaterialId(null);
       if (!result.ok) toast.error(result.error.message);
     });
   }
 
   function handleRemove(materialId: string) {
+    setBusyMaterialId(materialId);
     startTransition(async () => {
       const result = await removeMaterialAction(proposalId, materialId);
+      setBusyMaterialId(null);
       if (result.ok) {
         setMaterials((prev) => prev.filter((m) => m.id !== materialId));
       } else {
@@ -133,20 +138,28 @@ export function SupportingMaterialPanel({
                         variant="ghost"
                         size="icon"
                         aria-label={`Retry extracting ${material.filename}`}
-                        disabled={pendingId}
+                        disabled={isPending}
                         onClick={() => handleRetry(material.id)}
                       >
-                        <RotateCw className="size-4" />
+                        {isPending && busyMaterialId === material.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <RotateCw className="size-4" />
+                        )}
                       </Button>
                     ) : null}
                     <Button
                       variant="ghost"
                       size="icon"
                       aria-label={`Remove ${material.filename}`}
-                      disabled={pendingId}
+                      disabled={isPending}
                       onClick={() => handleRemove(material.id)}
                     >
-                      <Trash2 className="size-4" />
+                      {isPending && busyMaterialId === material.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-4" />
+                      )}
                     </Button>
                   </div>
                 ) : null}

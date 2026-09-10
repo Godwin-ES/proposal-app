@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Loader2, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -54,7 +54,11 @@ function DeleteProposalButton({ proposal }: { proposal: ProposalRow }) {
           aria-label="Delete proposal"
           onClick={(e) => e.stopPropagation()}
         >
-          <Trash2 className="size-4 text-muted-foreground" />
+          {pending ? (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Trash2 className="size-4 text-muted-foreground" />
+          )}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent onClick={(e) => e.stopPropagation()}>
