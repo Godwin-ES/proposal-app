@@ -17,7 +17,7 @@ describe("computeReviewContext", () => {
 
     const context = computeReviewContext("v1", versions, generationRuns, MATERIALS);
 
-    expect(context.sourcesUsed).toEqual([{ id: "mat-1", filename: "discovery-notes.pdf" }]);
+    expect(context.materials).toEqual([{ id: "mat-1", filename: "discovery-notes.pdf" }]);
     const scope = context.sections.find((s) => s.section === "projectScope")!;
     expect(scope.grounded).toBe(true);
     expect(scope.filenames).toEqual(["discovery-notes.pdf"]);
@@ -64,6 +64,22 @@ describe("computeReviewContext", () => {
 
   it("returns nothing grounded when the current version isn't in the given version list", () => {
     const context = computeReviewContext("missing", [], [], MATERIALS);
-    expect(context).toEqual({ sourcesUsed: [], sections: [] });
+    expect(context).toEqual({ materials: [], sections: [] });
+  });
+
+  it("lists every uploaded material regardless of whether it was ever cited", () => {
+    const versions: ReviewContextVersionMeta[] = [
+      { id: "v1", versionNumber: 1, changeType: "initial_generation", changedSections: [] },
+    ];
+    // The AI flagged mat-2 as irrelevant and correctly never cited it — it
+    // should still appear in the full materials list for the Approver.
+    const generationRuns = [
+      { outputVersionId: "v1", materialUsage: [{ materialId: "mat-1", sections: ["projectScope"], factUsed: "fact" }] },
+    ];
+    const materials = [...MATERIALS, { id: "mat-2", filename: "irrelevant-upload.txt" }];
+
+    const context = computeReviewContext("v1", versions, generationRuns, materials);
+
+    expect(context.materials).toEqual(materials);
   });
 });

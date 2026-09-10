@@ -6,11 +6,12 @@ import { MaterialTextDialog } from "@/components/shared/material-text-dialog";
 import { Button } from "@/components/ui/button";
 
 /**
- * The Approver's "Sources used" list — click a filename to see the exact
- * extracted text the AI read from it (never the raw file). Only materials
- * the review context already determined were actually cited grounding some
- * section are listed here at all (see lib/domain/material-attribution.ts),
- * and get_review_material_text re-checks that same citation server-side.
+ * The Approver's "Sources used" list — every material ever uploaded to this
+ * proposal, not filtered to only ones actually cited (whether a given one
+ * currently grounds anything is shown separately, in "AI-grounded
+ * sections"). Click a filename to see the exact extracted text the AI read
+ * from it, never the raw file — including one the AI flagged as irrelevant
+ * and correctly never used, which an Approver may still want to check.
  */
 export function SourceMaterialsList({
   proposalId,
@@ -37,7 +38,7 @@ export function SourceMaterialsList({
   }
 
   if (sources.length === 0) {
-    return <p className="mt-1 text-muted-foreground">No supporting material was used.</p>;
+    return <p className="mt-1 text-muted-foreground">No supporting material was uploaded.</p>;
   }
 
   return (

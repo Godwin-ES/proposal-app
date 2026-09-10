@@ -23,7 +23,12 @@ export type ReviewContextSection = {
 };
 
 export type ReviewContext = {
-  sourcesUsed: ReviewContextMaterial[];
+  /** Every material ever uploaded to this proposal — not filtered to only
+   * ones actually cited. Whether a given one currently grounds anything is
+   * conveyed by `sections` instead, so the Approver can see the full set of
+   * material Sales considered (including one the AI flagged as irrelevant
+   * and correctly never cited) rather than only the subset that "worked". */
+  materials: ReviewContextMaterial[];
   sections: ReviewContextSection[];
 };
 
@@ -44,7 +49,7 @@ export function computeReviewContext(
   materials: ReviewContextMaterial[]
 ): ReviewContext {
   const current = versions.find((v) => v.id === currentVersionId);
-  if (!current) return { sourcesUsed: [], sections: [] };
+  if (!current) return { materials: [], sections: [] };
 
   const byVersionNumberDesc = [...versions]
     .filter((v) => v.versionNumber <= current.versionNumber)
@@ -83,9 +88,5 @@ export function computeReviewContext(
     filenames: cited.map((m) => m.filename),
   }));
 
-  const sourcesUsed = Array.from(
-    new Map(citedBySection.flatMap(({ cited }) => cited).map((m) => [m.id, m])).values()
-  );
-
-  return { sourcesUsed, sections };
+  return { materials, sections };
 }

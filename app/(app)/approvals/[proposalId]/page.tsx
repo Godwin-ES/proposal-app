@@ -118,7 +118,7 @@ export default async function ApprovalReviewPage({
         <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
           <div>
             <p className="font-medium">Sources used</p>
-            <SourceMaterialsList proposalId={proposal.id} sources={reviewContext.sourcesUsed} />
+            <SourceMaterialsList proposalId={proposal.id} sources={reviewContext.materials} />
           </div>
           <div>
             <p className="font-medium">AI-grounded sections</p>
