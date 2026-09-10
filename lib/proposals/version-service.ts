@@ -16,7 +16,7 @@ import { proposalSnapshotSchema } from "@/lib/domain/schemas";
 import { hashProposalSnapshot } from "@/lib/domain/hashing";
 import { evaluateApprovalReadiness } from "@/lib/domain/readiness";
 import { computeEditableStatus, assertVersionWritableStatus } from "@/lib/domain/state-machine";
-import { carryForwardClarificationFlags } from "@/lib/domain/clarification";
+import { carryForwardClarificationFlags, openClarificationFlags } from "@/lib/domain/clarification";
 import { DomainError } from "@/lib/domain/errors";
 
 export async function saveManualRevision(
@@ -51,7 +51,7 @@ export async function saveManualRevision(
   const clarificationFlags = carryForwardClarificationFlags(previousFlags, resolvedSections);
 
   const approvalBlockers = evaluateApprovalReadiness({ snapshot: parsed.data, hasCurrentVersion: true });
-  const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
+  const nextStatus = computeEditableStatus(approvalBlockers, openClarificationFlags(clarificationFlags));
   const contentHash = hashProposalSnapshot(parsed.data);
 
   return createProposalVersion(supabase, {

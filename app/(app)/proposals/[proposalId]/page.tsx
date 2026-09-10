@@ -8,6 +8,7 @@ import { listMaterials } from "@/lib/materials/service";
 import { listApprovalsForProposal } from "@/lib/repositories/approvals";
 import { evaluateApprovalReadiness, evaluateGenerationReadiness } from "@/lib/domain/readiness";
 import { isEditableStatus, isVersionWritableStatus } from "@/lib/domain/state-machine";
+import { openClarificationFlags } from "@/lib/domain/clarification";
 import { PageHeader } from "@/components/shared/page-header";
 import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -124,7 +125,7 @@ export default async function ProposalPage({
       versionNumber={currentVersion.version_number}
       snapshot={currentVersion.snapshot}
       approvalBlockers={approvalBlockers}
-      clarificationFlags={currentVersion.clarification_flags}
+      clarificationFlags={openClarificationFlags(currentVersion.clarification_flags)}
       clientEmail={intake.clientEmail}
       changeRequest={changeRequest ? { comments: changeRequest.comments, createdAt: changeRequest.created_at } : null}
       editable={isVersionWritableStatus(proposal.status)}
@@ -141,7 +142,7 @@ export default async function ProposalPage({
         isEditableStatus(proposal.status) &&
         approvalBlockers.length === 0 &&
         !changeRequest &&
-        currentVersion.clarification_flags.length === 0
+        openClarificationFlags(currentVersion.clarification_flags).length === 0
       }
       versions={versions.map((v) => ({
         id: v.id,

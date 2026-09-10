@@ -52,16 +52,23 @@ export type ChangedSectionLabel = ProposalSectionKey | "nextSteps" | "timeline" 
 /**
  * An AI-raised concern about a generated version. `section` ties it to the
  * content section that resolves it — editing or regenerating that section
- * automatically clears the flag (see mergeClarificationFlags in
+ * automatically marks it "resolved" (see carryForwardClarificationFlags in
  * lib/domain/clarification.ts). `section: null` is for concerns that aren't
  * about one section (e.g. an uploaded file that seems unrelated to this
- * proposal entirely) — those only clear via an explicit dismiss, since
- * there's no single section whose edit would resolve them.
+ * proposal entirely) — those only change status via an explicit dismiss,
+ * since there's no single section whose edit would resolve them.
+ *
+ * Flags are never deleted once raised, only re-statused — an Approver
+ * should still be able to see that something was flagged even after Sales
+ * dismissed or resolved it, not just while it's still open. Only "open"
+ * flags block submission or show in the Salesperson's actionable banner;
+ * the Approver's review sees the full history regardless of status.
  */
 export type ClarificationFlag = {
   id: string;
   section: ProposalSectionKey | null;
   message: string;
+  status: "open" | "dismissed" | "resolved";
 };
 
 export type ProposalIntake = {

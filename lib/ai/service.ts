@@ -4,7 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import type { ClarificationFlag, GenerationProvider, ProposalSectionKey } from "@/lib/domain/types";
 import { PROPOSAL_SECTION_KEYS } from "@/lib/domain/types";
-import { withFlagIds, carryForwardClarificationFlags } from "@/lib/domain/clarification";
+import { withFlagIds, carryForwardClarificationFlags, openClarificationFlags } from "@/lib/domain/clarification";
 import { rowToIntake } from "@/lib/repositories/proposals";
 import { getProposalForOwner } from "@/lib/proposals/service";
 import { getGenerationMaterials } from "@/lib/materials/service";
@@ -81,7 +81,7 @@ export async function generateInitialDraft(
   const contentHash = hashProposalSnapshot(snapshot);
   const approvalBlockers = evaluateApprovalReadiness({ snapshot, hasCurrentVersion: true });
   const clarificationFlags = withFlagIds(aiResult.data.clarificationFlags);
-  const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
+  const nextStatus = computeEditableStatus(approvalBlockers, openClarificationFlags(clarificationFlags));
 
   let version: VersionRow;
   try {
@@ -195,7 +195,7 @@ export async function regenerateSection(
     [targetSection],
     withFlagIds(aiResult.data.clarificationFlags)
   );
-  const nextStatus = computeEditableStatus(approvalBlockers, clarificationFlags);
+  const nextStatus = computeEditableStatus(approvalBlockers, openClarificationFlags(clarificationFlags));
 
   let version: VersionRow;
   try {

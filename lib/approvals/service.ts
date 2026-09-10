@@ -11,6 +11,7 @@ import {
   getReviewMaterialText,
 } from "@/lib/repositories/versions";
 import { computeReviewContext } from "@/lib/domain/material-attribution";
+import { openClarificationFlags } from "@/lib/domain/clarification";
 import * as approvalsRepo from "@/lib/repositories/approvals";
 import * as proposalsRepo from "@/lib/repositories/proposals";
 import { evaluateApprovalReadiness } from "@/lib/domain/readiness";
@@ -50,7 +51,7 @@ export async function submitProposalForApproval(
     );
   }
 
-  if (version.clarification_flags.length > 0) {
+  if (openClarificationFlags(version.clarification_flags).length > 0) {
     throw new DomainError(
       "READINESS_ERROR",
       "submit-approval",

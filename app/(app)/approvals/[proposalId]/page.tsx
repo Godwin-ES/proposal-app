@@ -11,6 +11,13 @@ import { buildProposalText } from "@/lib/templates/proposal";
 import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { SourceMaterialsList } from "@/components/approvals/source-materials-list";
 import { DomainError } from "@/lib/domain/errors";
+import type { ClarificationFlag } from "@/lib/domain/types";
+
+const CLARIFICATION_STATUS_LABELS: Record<ClarificationFlag["status"], string> = {
+  open: "Open",
+  dismissed: "Dismissed by Sales",
+  resolved: "Resolved (section edited)",
+};
 
 export default async function ApprovalReviewPage({
   params,
@@ -135,18 +142,20 @@ export default async function ApprovalReviewPage({
             )}
           </div>
           <div>
-            <p className="font-medium">Open clarification items</p>
+            <p className="font-medium">AI clarification notes</p>
             {version.clarification_flags.length > 0 ? (
               <ul className="mt-1 list-disc pl-5 text-muted-foreground">
                 {version.clarification_flags.map((flag) => (
                   <li key={flag.id}>
+                    <span className="font-medium text-foreground">{CLARIFICATION_STATUS_LABELS[flag.status]}</span>
+                    {" — "}
                     {flag.section ? `${SECTION_DISPLAY_LABELS[flag.section]}: ` : ""}
                     {flag.message}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-muted-foreground">None.</p>
+              <p className="mt-1 text-muted-foreground">None raised.</p>
             )}
           </div>
           <div>
