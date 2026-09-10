@@ -8,7 +8,11 @@ import { cn } from "@/lib/utils";
 type TabConfig = {
   key: string;
   label: string;
-  status: ProposalStatus;
+  // Several statuses can feed one tab — the Approver's job ends at the
+  // approval decision itself, so a proposal moving on to Delivered (the
+  // Salesperson's own end-of-timeline status) should not make it disappear
+  // from the Approver's own "Approved" history.
+  statuses: ProposalStatus[];
   emptyTitle: string;
   emptyDescription: string;
 };
@@ -17,32 +21,29 @@ const TABS: TabConfig[] = [
   {
     key: "pending",
     label: "Pending Approval",
-    status: "pending_approval",
+    statuses: ["pending_approval"],
     emptyTitle: "Nothing waiting for review",
     emptyDescription: "Proposals submitted by a salesperson will appear here.",
   },
   {
     key: "changes-requested",
     label: "Changes Requested",
-    status: "changes_requested",
+    statuses: ["changes_requested"],
     emptyTitle: "Nothing sent back yet",
     emptyDescription: "Proposals you've asked a salesperson to revise will appear here.",
   },
   {
     key: "approved",
     label: "Approved",
-    status: "approved",
+    statuses: ["approved", "delivered"],
     emptyTitle: "Nothing approved yet",
     emptyDescription: "Proposals you've signed off on will appear here.",
   },
-  {
-    key: "delivered",
-    label: "Delivered",
-    status: "delivered",
-    emptyTitle: "Nothing delivered yet",
-    emptyDescription: "Proposals you approved that have since been sent to the client will appear here.",
-  },
 ];
+
+function rowsFor(rowsByStatus: Record<ProposalStatus, ApprovalQueueRow[]>, statuses: ProposalStatus[]) {
+  return statuses.flatMap((status) => rowsByStatus[status] ?? []);
+}
 
 export function ApprovalStatusTabs({ rowsByStatus }: { rowsByStatus: Record<ProposalStatus, ApprovalQueueRow[]> }) {
   return (
@@ -52,7 +53,7 @@ export function ApprovalStatusTabs({ rowsByStatus }: { rowsByStatus: Record<Prop
         className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent p-0"
       >
         {TABS.map((tab) => {
-          const count = rowsByStatus[tab.status]?.length ?? 0;
+          const count = rowsFor(rowsByStatus, tab.statuses).length;
           return (
             <TabsTrigger
               key={tab.key}
@@ -80,7 +81,7 @@ export function ApprovalStatusTabs({ rowsByStatus }: { rowsByStatus: Record<Prop
       {TABS.map((tab) => (
         <TabsContent key={tab.key} value={tab.key} className="mt-4">
           <ApprovalQueue
-            rows={rowsByStatus[tab.status] ?? []}
+            rows={rowsFor(rowsByStatus, tab.statuses)}
             emptyTitle={tab.emptyTitle}
             emptyDescription={tab.emptyDescription}
           />
