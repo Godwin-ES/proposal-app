@@ -17,14 +17,14 @@ describe("formatTimeline / parseTimeline", () => {
     expect(parseTimeline("1 week")).toEqual({ amount: 1, unit: "weeks" });
   });
 
-  it("normalizes common unit aliases", () => {
-    expect(parseTimeline("45 mins")).toEqual({ amount: 45, unit: "minutes" });
-    expect(parseTimeline("2 hrs")).toEqual({ amount: 2, unit: "hours" });
+  it("normalizes singular/plural unit spelling", () => {
+    expect(parseTimeline("1 month")).toEqual({ amount: 1, unit: "months" });
+    expect(parseTimeline("2 days")).toEqual({ amount: 2, unit: "days" });
   });
 
-  it("falls back to a sane default for unparseable input", () => {
-    expect(parseTimeline("")).toEqual({ amount: 0, unit: "weeks" });
-    expect(parseTimeline("sometime soon")).toEqual({ amount: 0, unit: "weeks" });
+  it("falls back to a sane non-zero default for unparseable input", () => {
+    expect(parseTimeline("")).toEqual({ amount: 1, unit: "weeks" });
+    expect(parseTimeline("sometime soon")).toEqual({ amount: 1, unit: "weeks" });
   });
 
   it("round-trips format -> parse -> format", () => {
@@ -35,22 +35,28 @@ describe("formatTimeline / parseTimeline", () => {
 });
 
 describe("formatPricing / parsePricing", () => {
-  it("formats with a dollar sign and thousands separators", () => {
-    expect(formatPricing(14500)).toBe("$14,500");
-    expect(formatPricing(0)).toBe("$0");
+  it("formats with a currency code and thousands separators", () => {
+    expect(formatPricing(14500, "USD")).toBe("USD 14,500");
+    expect(formatPricing(1, "EUR")).toBe("EUR 1");
   });
 
-  it("parses a formatted price back into a number", () => {
-    expect(parsePricing("$14,500")).toBe(14500);
+  it("parses a formatted price back into amount and currency", () => {
+    expect(parsePricing("USD 14,500")).toEqual({ amount: 14500, currency: "USD" });
+    expect(parsePricing("GBP 9,999")).toEqual({ amount: 9999, currency: "GBP" });
   });
 
-  it("falls back to 0 for unparseable input", () => {
-    expect(parsePricing("")).toBe(0);
-    expect(parsePricing("call for pricing")).toBe(0);
+  it("parses legacy $-prefixed values (from before currency selection existed), defaulting to USD", () => {
+    expect(parsePricing("$14,500")).toEqual({ amount: 14500, currency: "USD" });
+  });
+
+  it("falls back to 0/USD for unparseable input", () => {
+    expect(parsePricing("")).toEqual({ amount: 0, currency: "USD" });
+    expect(parsePricing("call for pricing")).toEqual({ amount: 0, currency: "USD" });
   });
 
   it("round-trips format -> parse -> format", () => {
-    const formatted = formatPricing(23000);
-    expect(formatPricing(parsePricing(formatted))).toBe(formatted);
+    const formatted = formatPricing(23000, "CAD");
+    const parsed = parsePricing(formatted);
+    expect(formatPricing(parsed.amount, parsed.currency)).toBe(formatted);
   });
 });

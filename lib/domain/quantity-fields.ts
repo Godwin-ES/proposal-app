@@ -1,23 +1,21 @@
 /**
- * Timeline and Pricing are stored as plain strings ("6 weeks", "$14,500") so
- * the rest of the pipeline (compose.ts, the PDF renderer, templates) never
- * needs to change — these helpers just constrain how that string gets
- * constructed and parsed back for a controlled numeric input, instead of
- * letting either field be freeform text.
+ * Timeline and Pricing are stored as plain strings ("6 weeks", "USD 14,500")
+ * so the rest of the pipeline (compose.ts, the PDF renderer, templates)
+ * never needs to change — these helpers just constrain how that string gets
+ * constructed and parsed back for a controlled input, instead of letting
+ * either field be freeform text.
  */
 
-export const TIMELINE_UNITS = ["minutes", "hours", "days", "weeks", "months"] as const;
+export const TIMELINE_UNITS = ["days", "weeks", "months"] as const;
 export type TimelineUnit = (typeof TIMELINE_UNITS)[number];
 
+/** The only way to represent an immediate/free engagement — never a plain
+ * "0 days"/"0 [currency] 0", which reads as an omission, not a deliberate
+ * choice. Produced only by the Same day / No cost checkbox, never typed. */
+export const TIMELINE_SAME_DAY = "Same day";
+export const PRICING_NO_COST = "No cost";
+
 const TIMELINE_UNIT_ALIASES: Record<string, TimelineUnit> = {
-  minute: "minutes",
-  minutes: "minutes",
-  min: "minutes",
-  mins: "minutes",
-  hour: "hours",
-  hours: "hours",
-  hr: "hours",
-  hrs: "hours",
   day: "days",
   days: "days",
   week: "weeks",
@@ -38,14 +36,31 @@ export function parseTimeline(value: string): { amount: number; unit: TimelineUn
     const unit = TIMELINE_UNIT_ALIASES[match[2].toLowerCase()];
     if (unit && Number.isFinite(amount)) return { amount, unit };
   }
-  return { amount: 0, unit: "weeks" };
+  return { amount: 1, unit: "weeks" };
 }
 
-export function formatPricing(amount: number): string {
-  return `$${amount.toLocaleString("en-US")}`;
+export const CURRENCY_CODES = ["USD", "EUR", "GBP", "CAD", "AUD"] as const;
+export type CurrencyCode = (typeof CURRENCY_CODES)[number];
+
+export function formatPricing(amount: number, currency: CurrencyCode): string {
+  return `${currency} ${amount.toLocaleString("en-US")}`;
 }
 
-export function parsePricing(value: string): number {
-  const numeric = Number(value.replace(/[^0-9.]/g, ""));
-  return Number.isFinite(numeric) ? numeric : 0;
+export function parsePricing(value: string): { amount: number; currency: CurrencyCode } {
+  const trimmed = value.trim();
+
+  const codeMatch = trimmed.match(/^([A-Za-z]{3})\s+([\d,]*\.?\d*)$/);
+  if (codeMatch) {
+    const code = codeMatch[1].toUpperCase();
+    const amount = Number(codeMatch[2].replace(/,/g, ""));
+    if ((CURRENCY_CODES as readonly string[]).includes(code) && Number.isFinite(amount)) {
+      return { amount, currency: code as CurrencyCode };
+    }
+  }
+
+  // Legacy "$14,500"-style values from before currency selection existed —
+  // those proposals are otherwise untouched (frozen snapshots), this just
+  // lets the field still parse sensibly if it's ever reopened for editing.
+  const numeric = Number(trimmed.replace(/[^0-9.]/g, ""));
+  return { amount: Number.isFinite(numeric) ? numeric : 0, currency: "USD" };
 }
