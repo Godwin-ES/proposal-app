@@ -8,6 +8,7 @@ import { ApprovalDecisionPanel } from "@/components/approvals/approval-decision-
 import { Badge } from "@/components/ui/badge";
 import { LocalDateTime } from "@/components/shared/local-datetime";
 import { buildProposalText } from "@/lib/templates/proposal";
+import { formatDateOfCall } from "@/lib/domain/date-format";
 import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { SourceMaterialsList } from "@/components/approvals/source-materials-list";
 import { DomainError } from "@/lib/domain/errors";
@@ -60,7 +61,7 @@ export default async function ApprovalReviewPage({
       <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
         <div>
           <dt className="text-muted-foreground">Date of call</dt>
-          <dd>{snapshot.client.dateOfCall || "—"}</dd>
+          <dd>{snapshot.client.dateOfCall ? formatDateOfCall(snapshot.client.dateOfCall) : "—"}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Client email</dt>

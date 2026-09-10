@@ -28,7 +28,7 @@ type FieldConfig = {
 const CLIENT_INFO_FIELDS: FieldConfig[] = [
   { name: "clientName", label: "Client Name", required: true },
   { name: "companyName", label: "Company Name", required: true },
-  { name: "dateOfCall", label: "Date of Call", required: true },
+  { name: "dateOfCall", label: "Date of Call", required: true, inputType: "date" },
   { name: "salespersonName", label: "Salesperson Name", required: true },
   { name: "clientEmail", label: "Client Email (delivery address)", inputType: "email" },
 ];

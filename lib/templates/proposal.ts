@@ -1,4 +1,5 @@
 import type { ProposalSnapshot } from "@/lib/domain/types";
+import { formatDateOfCall } from "@/lib/domain/date-format";
 
 /**
  * Deterministic reference copy adapted from ../../assets/proposal-template.md.
@@ -43,7 +44,7 @@ export function buildProposalText(snapshot: ProposalSnapshot): string {
 
 ${client.companyName}
 Prepared by ${client.salespersonName}
-Date: ${client.dateOfCall}
+Date: ${formatDateOfCall(client.dateOfCall)}
 
 1. Introduction
 

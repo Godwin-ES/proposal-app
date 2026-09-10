@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { ProposalSnapshot } from "@/lib/domain/types";
+import { formatDateOfCall } from "@/lib/domain/date-format";
 import {
   buildProposedSolutionIntro,
   buildDeliverablesIntro,
@@ -89,7 +90,7 @@ export function ProposalDocument({ snapshot }: { snapshot: ProposalSnapshot }) {
           </Text>
           <Text style={styles.metaItem}>
             <Text style={styles.metaLabel}>Date: </Text>
-            {client.dateOfCall}
+            {formatDateOfCall(client.dateOfCall)}
           </Text>
         </View>
         <View style={styles.headerRule} />
