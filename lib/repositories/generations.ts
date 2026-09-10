@@ -76,6 +76,23 @@ export async function completeGenerationRun(
   return data as GenerationRunRow;
 }
 
+/**
+ * Retroactively links one or more generation_runs to the version their
+ * regeneration output ended up saved into — needed now that a regeneration
+ * no longer creates its own version immediately (see
+ * regenerateSectionPreview in lib/ai/service.ts), so at the time the run
+ * completes there's no version yet to attach it to.
+ */
+export async function attachGenerationRunsToVersion(
+  supabase: SupabaseClient<Database>,
+  runIds: string[],
+  versionId: string
+): Promise<void> {
+  if (runIds.length === 0) return;
+  const { error } = await supabase.from("generation_runs").update({ output_version_id: versionId }).in("id", runIds);
+  if (error) throw new DomainError("VALIDATION_ERROR", "generation-run-attach", error.message, true);
+}
+
 export async function listGenerationRuns(
   supabase: SupabaseClient<Database>,
   proposalId: string

@@ -14,7 +14,8 @@ vi.mock("@/lib/ai/provider", () => ({
   defaultModelFor: () => "mock-model",
 }));
 
-const { generateInitialDraft, regenerateSection } = await import("@/lib/ai/service");
+const { generateInitialDraft, regenerateSectionPreview } = await import("@/lib/ai/service");
+const { saveManualRevision } = await import("@/lib/proposals/version-service");
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -240,7 +241,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     return { proposalId: proposal.id, version };
   }
 
-  it("changes only the target section and creates a new version", async () => {
+  it("produces preview content without creating a version or touching current_version_id", async () => {
     mockRegenerateSection.mockClear();
     const { proposalId, version } = await generatedProposal();
 
@@ -253,17 +254,30 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       outputTokens: 1,
     });
 
-    const v2 = await regenerateSection(supabase, proposalId, version.id, "deliverables", "Add a second deliverable.", "anthropic", user);
+    const preview = await regenerateSectionPreview(
+      supabase,
+      proposalId,
+      "deliverables",
+      "Add a second deliverable.",
+      "anthropic",
+      version.snapshot,
+      user
+    );
 
-    expect(v2.version_number).toBe(2);
-    expect(v2.changed_sections).toEqual(["deliverables"]);
-    expect(v2.snapshot.content.deliverables).toEqual(["New deliverable A", "New deliverable B"]);
-    expect(v2.snapshot.content.introduction).toBe(version.snapshot.content.introduction);
-    expect(v2.snapshot.content.projectScope).toBe(version.snapshot.content.projectScope);
-    expect(v2.snapshot.content.recommendedApproach).toBe(version.snapshot.content.recommendedApproach);
-    expect(v2.snapshot.content.timeline).toBe(version.snapshot.content.timeline);
-    expect(v2.snapshot.content.pricing).toBe(version.snapshot.content.pricing);
-    expect(v2.snapshot.client).toEqual(version.snapshot.client);
+    expect(preview.snapshot.content.deliverables).toEqual(["New deliverable A", "New deliverable B"]);
+    expect(preview.snapshot.content.introduction).toBe(version.snapshot.content.introduction);
+    expect(preview.snapshot.content.projectScope).toBe(version.snapshot.content.projectScope);
+    expect(preview.snapshot.content.recommendedApproach).toBe(version.snapshot.content.recommendedApproach);
+    expect(preview.snapshot.client).toEqual(version.snapshot.client);
+    expect(preview.generationRunId).toBeTruthy();
+
+    // Nothing persisted yet: still v1, and the run has no output_version_id.
+    const { data: current } = await admin.from("proposals").select("current_version_id").eq("id", proposalId).single();
+    expect(current?.current_version_id).toBe(version.id);
+
+    const { data: run } = await admin.from("generation_runs").select().eq("id", preview.generationRunId).single();
+    expect(run?.status).toBe("succeeded");
+    expect(run?.output_version_id).toBeNull();
   });
 
   it("rejects a blank revision instruction without calling the provider", async () => {
@@ -271,18 +285,18 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     const { proposalId, version } = await generatedProposal();
 
     await expect(
-      regenerateSection(supabase, proposalId, version.id, "introduction", "   ", "anthropic", user)
+      regenerateSectionPreview(supabase, proposalId, "introduction", "   ", "anthropic", version.snapshot, user)
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect(mockRegenerateSection).not.toHaveBeenCalled();
   });
 
-  it("does not create a version when the provider call fails", async () => {
+  it("marks the run failed and leaves current_version_id untouched when the provider call fails", async () => {
     mockRegenerateSection.mockClear();
     const { proposalId, version } = await generatedProposal();
     mockRegenerateSection.mockRejectedValueOnce(new Error("AI_OUTPUT_INVALID: bad output"));
 
     await expect(
-      regenerateSection(supabase, proposalId, version.id, "introduction", "Make it punchier.", "anthropic", user)
+      regenerateSectionPreview(supabase, proposalId, "introduction", "Make it punchier.", "anthropic", version.snapshot, user)
     ).rejects.toThrow();
 
     const { data: current } = await admin.from("proposals").select("current_version_id").eq("id", proposalId).single();
@@ -293,14 +307,126 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     expect(runs!.find((r) => r.operation === "section_regeneration")?.status).toBe("failed");
   });
 
-  it("marks the run stale and preserves the newer version when a manual edit lands first", async () => {
+  it("rejects an unsupported regeneration target before calling the provider", async () => {
     mockRegenerateSection.mockClear();
     const { proposalId, version } = await generatedProposal();
 
-    // Simulate a manual edit that landed while the (mocked, slow) regeneration was in flight.
-    const manualEditSnapshot = { ...version.snapshot, content: { ...version.snapshot.content, pricing: "$20,000" } };
-    const { saveManualRevision } = await import("@/lib/proposals/version-service");
-    const v2 = await saveManualRevision(supabase, proposalId, version.id, manualEditSnapshot, user);
+    await expect(
+      regenerateSectionPreview(supabase, proposalId, "pricing" as never, "Lower it.", "anthropic", version.snapshot, user)
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(mockRegenerateSection).not.toHaveBeenCalled();
+  });
+
+  it("saving a regeneration's preview creates a version and links the generation_run to it", async () => {
+    mockRegenerateSection.mockClear();
+    const { proposalId, version } = await generatedProposal();
+
+    mockRegenerateSection.mockResolvedValueOnce({
+      data: { section: "introduction", content: "Punchier intro.", clarificationFlags: [], supportingMaterialUsage: [] },
+      provider: "anthropic" as const,
+      model: "mock-model",
+      latencyMs: 1,
+      inputTokens: 1,
+      outputTokens: 1,
+    });
+    const preview = await regenerateSectionPreview(
+      supabase,
+      proposalId,
+      "introduction",
+      "Make it punchier.",
+      "anthropic",
+      version.snapshot,
+      user
+    );
+
+    const v2 = await saveManualRevision(
+      supabase,
+      proposalId,
+      version.id,
+      preview.snapshot,
+      user,
+      ["introduction"],
+      preview.clarificationFlags,
+      [preview.generationRunId]
+    );
+
+    expect(v2.version_number).toBe(2);
+    expect(v2.change_type).toBe("section_regeneration");
+    expect(v2.changed_sections).toEqual(["introduction"]);
+    expect(v2.snapshot.content.introduction).toBe("Punchier intro.");
+
+    const { data: run } = await admin.from("generation_runs").select().eq("id", preview.generationRunId).single();
+    expect(run?.output_version_id).toBe(v2.id);
+  });
+
+  it("folds two regenerations into a single saved version, linking both runs to it", async () => {
+    mockRegenerateSection.mockClear();
+    const { proposalId, version } = await generatedProposal();
+
+    mockRegenerateSection.mockResolvedValueOnce({
+      data: { section: "introduction", content: "Regenerated intro.", clarificationFlags: [], supportingMaterialUsage: [] },
+      provider: "anthropic" as const,
+      model: "mock-model",
+      latencyMs: 1,
+      inputTokens: 1,
+      outputTokens: 1,
+    });
+    const firstPreview = await regenerateSectionPreview(
+      supabase,
+      proposalId,
+      "introduction",
+      "Punch it up.",
+      "anthropic",
+      version.snapshot,
+      user
+    );
+
+    // The second regeneration is based on the draft that already includes
+    // the first regeneration's (still unsaved) result, exactly as the
+    // workspace's client-side draft buffer would send it.
+    mockRegenerateSection.mockResolvedValueOnce({
+      data: { section: "deliverables", content: ["Regenerated deliverable"], clarificationFlags: [], supportingMaterialUsage: [] },
+      provider: "anthropic" as const,
+      model: "mock-model",
+      latencyMs: 1,
+      inputTokens: 1,
+      outputTokens: 1,
+    });
+    const secondPreview = await regenerateSectionPreview(
+      supabase,
+      proposalId,
+      "deliverables",
+      "Trim to one item.",
+      "anthropic",
+      firstPreview.snapshot,
+      user
+    );
+
+    const v2 = await saveManualRevision(
+      supabase,
+      proposalId,
+      version.id,
+      secondPreview.snapshot,
+      user,
+      ["introduction", "deliverables"],
+      [...firstPreview.clarificationFlags, ...secondPreview.clarificationFlags],
+      [firstPreview.generationRunId, secondPreview.generationRunId]
+    );
+
+    expect(v2.snapshot.content.introduction).toBe("Regenerated intro.");
+    expect(v2.snapshot.content.deliverables).toEqual(["Regenerated deliverable"]);
+    expect(v2.changed_sections.sort()).toEqual(["deliverables", "introduction"]);
+
+    const { data: runs } = await admin
+      .from("generation_runs")
+      .select("id, output_version_id")
+      .in("id", [firstPreview.generationRunId, secondPreview.generationRunId]);
+    expect(runs!.every((r) => r.output_version_id === v2.id)).toBe(true);
+  });
+
+  it("still rejects the save with STALE_VERSION if the base version changed before saving", async () => {
+    mockRegenerateSection.mockClear();
+    const { proposalId, version } = await generatedProposal();
 
     mockRegenerateSection.mockResolvedValueOnce({
       data: { section: "introduction", content: "Stale regeneration output.", clarificationFlags: [], supportingMaterialUsage: [] },
@@ -310,38 +436,35 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       inputTokens: 1,
       outputTokens: 1,
     });
+    const preview = await regenerateSectionPreview(
+      supabase,
+      proposalId,
+      "introduction",
+      "Make it punchier.",
+      "anthropic",
+      version.snapshot,
+      user
+    );
 
-    // This regeneration was based on the now-stale v1, not the current v2.
+    // Someone else saves a manual edit in the meantime, based on the same v1.
+    const manualEditSnapshot = { ...version.snapshot, content: { ...version.snapshot.content, pricing: "$20,000" } };
+    const v2 = await saveManualRevision(supabase, proposalId, version.id, manualEditSnapshot, user);
+
+    // Saving the regeneration's preview against the now-stale v1 must fail.
     await expect(
-      regenerateSection(supabase, proposalId, version.id, "introduction", "Make it punchier.", "anthropic", user)
+      saveManualRevision(
+        supabase,
+        proposalId,
+        version.id,
+        preview.snapshot,
+        user,
+        ["introduction"],
+        preview.clarificationFlags,
+        [preview.generationRunId]
+      )
     ).rejects.toMatchObject({ code: "STALE_VERSION" });
 
     const { data: current } = await admin.from("proposals").select("current_version_id").eq("id", proposalId).single();
     expect(current?.current_version_id).toBe(v2.id);
-
-    const { data: runs } = await admin
-      .from("generation_runs")
-      .select()
-      .eq("proposal_id", proposalId)
-      .eq("operation", "section_regeneration");
-    expect(runs![0].status).toBe("stale");
-  });
-
-  it("rejects an unsupported regeneration target before calling the provider", async () => {
-    mockRegenerateSection.mockClear();
-    const { proposalId, version } = await generatedProposal();
-
-    await expect(
-      regenerateSection(
-        supabase,
-        proposalId,
-        version.id,
-        "pricing" as never,
-        "Lower it.",
-        "anthropic",
-        user
-      )
-    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
-    expect(mockRegenerateSection).not.toHaveBeenCalled();
   });
 });

@@ -55,26 +55,39 @@ export function computeReviewContext(
     .filter((v) => v.versionNumber <= current.versionNumber)
     .sort((a, b) => b.versionNumber - a.versionNumber);
 
-  const runByOutputVersionId = new Map(generationRuns.map((r) => [r.outputVersionId, r]));
+  // A version can now have more than one linked generation_run — a batch
+  // may fold together several regenerations (each its own run) before being
+  // saved as a single version (see saveManualRevision /
+  // attachGenerationRunsToVersion) — so this must not assume 1:1.
+  const runsByOutputVersionId = new Map<string, ReviewContextGenerationRun[]>();
+  for (const run of generationRuns) {
+    const existing = runsByOutputVersionId.get(run.outputVersionId);
+    if (existing) existing.push(run);
+    else runsByOutputVersionId.set(run.outputVersionId, [run]);
+  }
   const materialById = new Map(materials.map((m) => [m.id, m]));
 
   function materialsFor(versionId: string, section: ProposalSectionKey): ReviewContextMaterial[] {
-    const run = runByOutputVersionId.get(versionId);
-    if (!run) return [];
-    const cited = run.materialUsage
+    const runs = runsByOutputVersionId.get(versionId) ?? [];
+    const cited = runs
+      .flatMap((run) => run.materialUsage)
       .filter((u) => u.sections.includes(section))
       .map((u) => materialById.get(u.materialId))
       .filter((m): m is ReviewContextMaterial => Boolean(m));
     return Array.from(new Map(cited.map((m) => [m.id, m])).values());
   }
 
-  /** Which materials (if any) currently ground this section — empty if the
-   * section's last determining change was a manual edit, or cites nothing. */
+  /** Which materials (if any) currently ground this section — determined by
+   * whichever generation_run(s) got linked to the version that last
+   * determined this section's content citing it, regardless of that
+   * version's own (now purely descriptive) change_type label — a batch save
+   * can freely mix manual edits and regenerations across different
+   * sections of the same version. */
   function citedMaterialsForSection(section: ProposalSectionKey): ReviewContextMaterial[] {
     for (const v of byVersionNumberDesc) {
       if (v.changeType === "initial_generation") return materialsFor(v.id, section);
       if (v.changedSections.includes(section)) {
-        return v.changeType === "manual_edit" ? [] : materialsFor(v.id, section);
+        return materialsFor(v.id, section);
       }
     }
     return [];

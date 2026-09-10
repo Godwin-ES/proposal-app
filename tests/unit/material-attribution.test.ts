@@ -82,4 +82,33 @@ describe("computeReviewContext", () => {
 
     expect(context.materials).toEqual(materials);
   });
+
+  it("attributes correctly when a batch save links several generation_runs to the same version", () => {
+    // A salesperson can now regenerate more than one section before ever
+    // saving — e.g. Introduction and Deliverables both regenerated, then
+    // saved together as one version — so a single version can have several
+    // linked generation_runs, each targeting a different section.
+    const versions: ReviewContextVersionMeta[] = [
+      { id: "v1", versionNumber: 1, changeType: "initial_generation", changedSections: [] },
+      {
+        id: "v2",
+        versionNumber: 2,
+        changeType: "section_regeneration",
+        changedSections: ["introduction", "deliverables"],
+      },
+    ];
+    const materials = [...MATERIALS, { id: "mat-2", filename: "second-file.txt" }];
+    const generationRuns = [
+      { outputVersionId: "v1", materialUsage: [] },
+      { outputVersionId: "v2", materialUsage: [{ materialId: "mat-1", sections: ["introduction"], factUsed: "a" }] },
+      { outputVersionId: "v2", materialUsage: [{ materialId: "mat-2", sections: ["deliverables"], factUsed: "b" }] },
+    ];
+
+    const context = computeReviewContext("v2", versions, generationRuns, materials);
+
+    const intro = context.sections.find((s) => s.section === "introduction")!;
+    expect(intro.filenames).toEqual(["discovery-notes.pdf"]);
+    const deliverables = context.sections.find((s) => s.section === "deliverables")!;
+    expect(deliverables.filenames).toEqual(["second-file.txt"]);
+  });
 });

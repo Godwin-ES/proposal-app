@@ -7,7 +7,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import * as proposalService from "@/lib/proposals/service";
 import { saveManualRevision, dismissClarificationFlag } from "@/lib/proposals/version-service";
 import { DomainError } from "@/lib/domain/errors";
-import type { ActionResult, ChangedSectionLabel, ProposalIntake, ProposalSnapshot } from "@/lib/domain/types";
+import type {
+  ActionResult,
+  ChangedSectionLabel,
+  ClarificationFlag,
+  ProposalIntake,
+  ProposalSnapshot,
+} from "@/lib/domain/types";
 
 export async function createProposalAction(): Promise<void> {
   const user = await requireSalesperson();
@@ -65,12 +71,23 @@ export async function saveManualRevisionAction(
   proposalId: string,
   expectedVersionId: string,
   snapshot: ProposalSnapshot,
-  changedSections: ChangedSectionLabel[] = []
+  changedSections: ChangedSectionLabel[] = [],
+  freshClarificationFlags: ClarificationFlag[] = [],
+  regenerationRunIds: string[] = []
 ): Promise<ActionResult<{ versionId: string }>> {
   try {
     const user = await requireSalesperson();
     const supabase = await createSupabaseServerClient();
-    const version = await saveManualRevision(supabase, proposalId, expectedVersionId, snapshot, user, changedSections);
+    const version = await saveManualRevision(
+      supabase,
+      proposalId,
+      expectedVersionId,
+      snapshot,
+      user,
+      changedSections,
+      freshClarificationFlags,
+      regenerationRunIds
+    );
     revalidatePath(`/proposals/${proposalId}`);
     return { ok: true, data: { versionId: version.id } };
   } catch (error) {

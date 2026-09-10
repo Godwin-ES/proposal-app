@@ -85,6 +85,14 @@ export function ProposalWorkspace({
   const [saving, setSaving] = useState(false);
   const [dismissingFlagId, setDismissingFlagId] = useState<string | null>(null);
 
+  // Accumulates across however many regenerations happen before the batch is
+  // actually saved — a fresh clarification flag only becomes real once Save
+  // Version runs (see saveManualRevisionAction), and the generation_run ids
+  // let the server retroactively attach each regeneration to whatever
+  // version this batch becomes (see attachGenerationRunsToVersion).
+  const [pendingRegenFlags, setPendingRegenFlags] = useState<ClarificationFlag[]>([]);
+  const [pendingRegenRunIds, setPendingRegenRunIds] = useState<string[]>([]);
+
   // Local, unsaved editing buffer — edits to any section update this only;
   // nothing reaches the database until "Save Version" is clicked, so
   // several sections can be changed and recorded as a single version
@@ -99,6 +107,8 @@ export function ProposalWorkspace({
   if (versionId !== renderedVersionId) {
     setRenderedVersionId(versionId);
     setDraft(snapshot);
+    setPendingRegenFlags([]);
+    setPendingRegenRunIds([]);
   }
 
   const dirtySections = diffChangedSections(snapshot, draft);
@@ -148,7 +158,14 @@ export function ProposalWorkspace({
 
   async function handleSaveVersion() {
     setSaving(true);
-    const result = await saveManualRevisionAction(proposalId, versionId, draft, dirtySections);
+    const result = await saveManualRevisionAction(
+      proposalId,
+      versionId,
+      draft,
+      dirtySections,
+      pendingRegenFlags,
+      pendingRegenRunIds
+    );
     setSaving(false);
     if (result.ok) {
       toast.success(
@@ -164,12 +181,28 @@ export function ProposalWorkspace({
 
   function handleDiscardDraft() {
     setDraft(snapshot);
+    setPendingRegenFlags([]);
+    setPendingRegenRunIds([]);
     toast.info("Unsaved changes discarded.");
   }
 
   function handleRevert(version: VersionHistoryEntry) {
     setDraft(version.snapshot);
+    setPendingRegenFlags([]);
+    setPendingRegenRunIds([]);
     toast.info(`Loaded v${version.versionNumber} — review below and Save Version to apply.`);
+  }
+
+  /** Drops a regeneration's result straight into the draft buffer — no
+   * version is created here. See handleSaveVersion. */
+  function handleRegenerated(result: {
+    snapshot: ProposalSnapshot;
+    clarificationFlags: ClarificationFlag[];
+    generationRunId: string;
+  }) {
+    setDraft(result.snapshot);
+    setPendingRegenFlags((prev) => [...prev, ...result.clarificationFlags]);
+    setPendingRegenRunIds((prev) => [...prev, result.generationRunId]);
   }
 
   async function dismissFlag(flagId: string) {
@@ -202,8 +235,6 @@ export function ProposalWorkspace({
       </Button>
     );
   }
-
-  const regenerateDisabledReason = isDirty ? "Save or discard your unsaved changes first." : undefined;
 
   return (
     <div className="flex flex-col gap-6 pb-20">
@@ -374,12 +405,11 @@ export function ProposalWorkspace({
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
-            versionId={versionId}
             targetSection="introduction"
             sectionLabel="Introduction"
             materialCount={materialCount}
-            disabled={isDirty}
-            disabledReason={regenerateDisabledReason}
+            currentSnapshot={draft}
+            onRegenerated={handleRegenerated}
           />
         }
       />
@@ -393,12 +423,11 @@ export function ProposalWorkspace({
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
-            versionId={versionId}
             targetSection="projectScope"
             sectionLabel="Project Scope"
             materialCount={materialCount}
-            disabled={isDirty}
-            disabledReason={regenerateDisabledReason}
+            currentSnapshot={draft}
+            onRegenerated={handleRegenerated}
           />
         }
       />
@@ -412,12 +441,11 @@ export function ProposalWorkspace({
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
-            versionId={versionId}
             targetSection="recommendedApproach"
             sectionLabel="Recommended Approach"
             materialCount={materialCount}
-            disabled={isDirty}
-            disabledReason={regenerateDisabledReason}
+            currentSnapshot={draft}
+            onRegenerated={handleRegenerated}
           />
         }
       />
@@ -449,12 +477,11 @@ export function ProposalWorkspace({
         extraActions={
           <RegenerateSectionDialog
             proposalId={proposalId}
-            versionId={versionId}
             targetSection="deliverables"
             sectionLabel="Deliverables"
             materialCount={materialCount}
-            disabled={isDirty}
-            disabledReason={regenerateDisabledReason}
+            currentSnapshot={draft}
+            onRegenerated={handleRegenerated}
           />
         }
       />
