@@ -35,6 +35,13 @@ const TABS: TabConfig[] = [
     emptyTitle: "Nothing approved yet",
     emptyDescription: "Proposals you've signed off on will appear here.",
   },
+  {
+    key: "delivered",
+    label: "Delivered",
+    status: "delivered",
+    emptyTitle: "Nothing delivered yet",
+    emptyDescription: "Proposals you approved that have since been sent to the client will appear here.",
+  },
 ];
 
 export function ApprovalStatusTabs({ rowsByStatus }: { rowsByStatus: Record<ProposalStatus, ApprovalQueueRow[]> }) {

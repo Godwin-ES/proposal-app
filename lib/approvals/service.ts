@@ -69,12 +69,21 @@ export async function getApprovalQueue(supabase: SupabaseClient<Database>) {
 }
 
 // Everything an approver may ever open a read-only review for. `pending_approval`
-// is the one they can still act on; `changes_requested` and `approved` are past
-// decisions kept visible for reference — current_version_id keeps pointing at
-// exactly the version that was decided on regardless of which way it went (see
-// decide_proposal_approval in supabase/migrations/003_week3_business_rpcs.sql),
-// so the same lookup works for all three.
-const APPROVER_VIEWABLE_STATUSES: ProposalStatus[] = ["pending_approval", "changes_requested", "approved"];
+// is the one they can still act on; `changes_requested`, `approved`, and
+// `delivered` are past decisions kept visible for reference — current_version_id
+// keeps pointing at exactly the version that was decided on regardless of which
+// way it went (see decide_proposal_approval in
+// supabase/migrations/003_week3_business_rpcs.sql), so the same lookup works for
+// all four. `delivered` matters here too: without it, a proposal an approver
+// decided on becomes invisible to them the moment it's sent, even though
+// proposals_select_approver_pending (RLS) already allows it via
+// approver_decided_proposal(id) regardless of current status.
+const APPROVER_VIEWABLE_STATUSES: ProposalStatus[] = [
+  "pending_approval",
+  "changes_requested",
+  "approved",
+  "delivered",
+];
 
 export async function listApprovalStatusProposals(supabase: SupabaseClient<Database>, statuses: ProposalStatus[]) {
   return proposalsRepo.listProposalsByStatuses(supabase, statuses);

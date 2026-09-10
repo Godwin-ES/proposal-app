@@ -8,7 +8,7 @@ import type { ApprovalQueueRow } from "@/components/approvals/approval-queue";
 import type { ProposalStatus } from "@/lib/domain/types";
 import type { ProposalRow } from "@/lib/repositories/proposals";
 
-const STATUSES: ProposalStatus[] = ["pending_approval", "changes_requested", "approved"];
+const STATUSES: ProposalStatus[] = ["pending_approval", "changes_requested", "approved", "delivered"];
 
 async function toRows(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, proposals: ProposalRow[]) {
   return Promise.all(
