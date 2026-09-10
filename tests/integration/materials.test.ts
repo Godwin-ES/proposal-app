@@ -9,6 +9,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import * as proposalsRepo from "@/lib/repositories/proposals";
 import * as materialsRepo from "@/lib/repositories/materials";
 import * as materialsService from "@/lib/materials/service";
+import { removeProposalStorage } from "@/lib/storage/cleanup";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { salesTestAccount, hasTestAccountCredentials } from "@/tests/helpers/test-accounts";
 
@@ -41,6 +42,12 @@ describe.skipIf(!hasCredentials)("supporting material pipeline (hosted Supabase 
   });
 
   afterAll(async () => {
+    // Every test in this file uploads a real file to hosted Storage, which
+    // has no FK to the proposal row and so is never cleaned up by deleting
+    // it — clean up explicitly, the same way the app itself must.
+    for (const id of proposalIds) {
+      await removeProposalStorage(supabase, user.userId, id);
+    }
     if (proposalIds.length > 0) {
       await admin.from("proposals").delete().in("id", proposalIds);
     }

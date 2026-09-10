@@ -20,6 +20,7 @@ import { ProposalEditorDialog } from "@/components/proposals/proposal-editor-dia
 import { ProposalDetailsEditor } from "@/components/proposals/proposal-details-editor";
 import { RegenerateSectionDialog } from "@/components/proposals/regenerate-section-dialog";
 import { SupportingMaterialPanel, type MaterialSummary } from "@/components/proposals/supporting-material-panel";
+import { DeleteProposalButton, DELETABLE_STATUSES } from "@/components/proposals/delete-proposal-button";
 import { TimelineInput } from "@/components/shared/timeline-input";
 import { PricingInput } from "@/components/shared/pricing-input";
 import { VersionHistory, type VersionHistoryEntry } from "@/components/proposals/version-history";
@@ -212,6 +213,16 @@ export function ProposalWorkspace({
         versionNumber={versionNumber}
         ownerName={ownerName}
         updatedAt={updatedAt}
+        actions={
+          DELETABLE_STATUSES.has(status) ? (
+            <DeleteProposalButton
+              proposalId={proposalId}
+              clientLabel={`${draft.client.clientName || "this proposal"}${draft.client.companyName ? ` (${draft.client.companyName})` : ""}`}
+              variant="full"
+              redirectTo="/dashboard"
+            />
+          ) : undefined
+        }
       />
 
       {changeRequest ? (

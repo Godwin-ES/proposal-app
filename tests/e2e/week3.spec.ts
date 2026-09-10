@@ -2,6 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { completeIntake } from "../fixtures/complete-intake";
 import { salesTestAccount, approverTestAccount } from "../helpers/test-accounts";
+import { removeProposalStorage } from "../../lib/storage/cleanup";
+import type { Database } from "../../lib/supabase/database.types";
 
 /**
  * Covers the major Week 3 user journey end to end against a real running app,
@@ -32,11 +34,19 @@ let proposalId = "";
 
 test.afterAll(async () => {
   if (!proposalId) return;
-  const admin = createClient(
+  const admin = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
+  // This spec generates a real final PDF and sends it, which uploads a real
+  // file to Storage — Storage has no FK to the proposal row, so it's never
+  // cleaned up by deleting it. Look up the owner first (needed to build the
+  // storage prefix) while the row still exists.
+  const { data: proposalRow } = await admin.from("proposals").select("created_by").eq("id", proposalId).single();
+  if (proposalRow) {
+    await removeProposalStorage(admin, proposalRow.created_by, proposalId);
+  }
   await admin.from("proposals").delete().eq("id", proposalId);
 });
 

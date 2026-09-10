@@ -15,6 +15,7 @@ import { IntakeForm } from "@/components/proposals/intake-form";
 import { SupportingMaterialPanel } from "@/components/proposals/supporting-material-panel";
 import { GenerateDraftPanel } from "@/components/proposals/generate-draft-panel";
 import { ProposalWorkspace } from "@/components/proposals/proposal-workspace";
+import { DeleteProposalButton, DELETABLE_STATUSES } from "@/components/proposals/delete-proposal-button";
 import { DomainError } from "@/lib/domain/errors";
 
 export default async function ProposalPage({
@@ -57,7 +58,19 @@ export default async function ProposalPage({
         <PageHeader
           title={proposal.client_name || "New proposal"}
           description={proposal.company_name || undefined}
-          actions={<StatusBadge status={proposal.status} />}
+          actions={
+            <div className="flex items-center gap-2">
+              <StatusBadge status={proposal.status} />
+              {DELETABLE_STATUSES.has(proposal.status) ? (
+                <DeleteProposalButton
+                  proposalId={proposal.id}
+                  clientLabel={`${proposal.client_name || "this proposal"}${proposal.company_name ? ` (${proposal.company_name})` : ""}`}
+                  variant="full"
+                  redirectTo="/dashboard"
+                />
+              ) : null}
+            </div>
+          }
         />
         <ReadinessPanel title="Generation readiness" blockers={generationBlockers} />
         <IntakeForm proposalId={proposal.id} defaultValues={intake} editable />
