@@ -24,7 +24,18 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     .eq("user_id", user.id)
     .single();
 
-  if (!profile) return null;
+  if (!profile) {
+    // A valid Supabase Auth session with no matching profile row (e.g. the
+    // profile was deleted directly in the database while the auth user
+    // still exists) would otherwise loop forever: this function returning
+    // null sends the caller to /login, but the proxy's own "already
+    // authenticated -> /dashboard" rule immediately bounces it back, since
+    // the session itself is still perfectly valid. A Server Component
+    // render can't clear the session cookie itself (see
+    // createSupabaseServerClient's setAll), so route through a handler that
+    // can, instead of returning null here.
+    redirect("/auth/invalid-session");
+  }
 
   return {
     userId: user.id,
