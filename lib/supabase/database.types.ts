@@ -153,6 +153,54 @@ export type Database = {
           },
         ]
       }
+      error_logs: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          message: string
+          proposal_id: string | null
+          role: string | null
+          stage: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message: string
+          proposal_id?: string | null
+          role?: string | null
+          stage: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message?: string
+          proposal_id?: string | null
+          role?: string | null
+          stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_logs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "error_logs_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generation_runs: {
         Row: {
           base_version_id: string | null
@@ -347,6 +395,7 @@ export type Database = {
           created_by: string
           current_version_id: string | null
           date_of_call: string | null
+          document_provides_fields: boolean
           estimated_pricing: string
           goals_and_objectives: string
           id: string
@@ -370,6 +419,7 @@ export type Database = {
           created_by: string
           current_version_id?: string | null
           date_of_call?: string | null
+          document_provides_fields?: boolean
           estimated_pricing?: string
           goals_and_objectives?: string
           id?: string
@@ -393,6 +443,7 @@ export type Database = {
           created_by?: string
           current_version_id?: string | null
           date_of_call?: string | null
+          document_provides_fields?: boolean
           estimated_pricing?: string
           goals_and_objectives?: string
           id?: string
@@ -816,6 +867,39 @@ export type Database = {
           created_by: string
           current_version_id: string | null
           date_of_call: string | null
+          estimated_pricing: string
+          goals_and_objectives: string
+          id: string
+          project_scope: string
+          proposed_timeline: string
+          recommended_services: string
+          salesperson_name: string
+          status: string
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_document_provides_fields: {
+        Args: { p_proposal_id: string; p_document_provides_fields: boolean }
+        Returns: {
+          approval_submitted_at: string | null
+          approval_submitted_by: string | null
+          client_email: string | null
+          client_name: string
+          client_needs_summary: string
+          company_name: string
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          date_of_call: string | null
+          document_provides_fields: boolean
           estimated_pricing: string
           goals_and_objectives: string
           id: string

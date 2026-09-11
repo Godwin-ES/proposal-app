@@ -51,7 +51,11 @@ export default async function ProposalPage({
   const materialsEditable = isVersionWritableStatus(proposal.status);
 
   if (!hasVersion) {
-    const generationBlockers = evaluateGenerationReadiness(intake);
+    const readyMaterialsCount = materials.filter((m) => m.extraction_status === "ready").length;
+    const generationBlockers = evaluateGenerationReadiness(intake, {
+      documentProvidesFields: proposal.document_provides_fields,
+      hasReadyMaterial: readyMaterialsCount > 0,
+    });
     const failedMaterials = materials.filter((m) => m.extraction_status === "failed");
     const pendingMaterials = materials.filter((m) => m.extraction_status === "pending");
     if (failedMaterials.length > 0) {
@@ -81,7 +85,12 @@ export default async function ProposalPage({
           }
         />
         <ReadinessPanel title="Generation readiness" blockers={generationBlockers} />
-        <IntakeForm proposalId={proposal.id} defaultValues={intake} editable />
+        <IntakeForm
+          proposalId={proposal.id}
+          defaultValues={intake}
+          documentProvidesFields={proposal.document_provides_fields}
+          editable
+        />
         <SupportingMaterialPanel
           proposalId={proposal.id}
           editable={materialsEditable}

@@ -1,4 +1,35 @@
 import { z } from "zod";
+import { TIMELINE_UNITS, CURRENCY_CODES } from "@/lib/domain/quantity-fields";
+
+/**
+ * Fill-only-if-blank values the model may offer for structural fields it
+ * otherwise never touches, drawn from supporting material — only used when
+ * the salesperson has declared (`documentProvidesFields`) that a document
+ * contains this information. Every key is nullable and independent: the
+ * model reports `null` for anything it can't find, and — critically —
+ * `composeInitialSnapshot` only ever consults these when the corresponding
+ * intake field was actually left at its default/blank; a value here can
+ * never override something the salesperson typed themselves. A contradiction
+ * with a value the salesperson DID provide is reported as a clarificationFlag
+ * instead of through this object.
+ */
+export const fieldsFromMaterialSchema = z.object({
+  clientName: z.string().trim().min(1).nullable(),
+  companyName: z.string().trim().min(1).nullable(),
+  timeline: z
+    .object({
+      amount: z.number().int().positive(),
+      unit: z.enum(TIMELINE_UNITS),
+    })
+    .nullable(),
+  pricing: z
+    .object({
+      amount: z.number().positive(),
+      currency: z.enum(CURRENCY_CODES),
+    })
+    .nullable(),
+});
+export type FieldsFromMaterial = z.infer<typeof fieldsFromMaterialSchema>;
 
 export const materialUsageSchema = z.object({
   materialId: z.string().uuid(),
@@ -29,6 +60,7 @@ export const generatedSectionsSchema = z.object({
   deliverables: z.array(z.string().trim().min(1)).min(1),
   clarificationFlags: z.array(clarificationFlagSchema).default([]),
   supportingMaterialUsage: z.array(materialUsageSchema).default([]),
+  fieldsFromMaterial: fieldsFromMaterialSchema,
 });
 
 export type GeneratedSections = z.infer<typeof generatedSectionsSchema>;

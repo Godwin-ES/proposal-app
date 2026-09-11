@@ -7,6 +7,11 @@ export type GenerationRequest = {
   model: string;
   intake: ProposalIntake;
   supportingMaterials: SupportingMaterialContext[];
+  /** The salesperson's pre-generation declaration that supporting material
+   * already contains the answers to some blank intake fields — see
+   * `document_provides_fields` on `proposals` and `fieldsFromMaterial` in
+   * lib/ai/schemas.ts. */
+  documentProvidesFields?: boolean;
 };
 
 export type RegenerationRequest = {

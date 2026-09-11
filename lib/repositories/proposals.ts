@@ -129,6 +129,22 @@ export async function updatePreGenerationIntake(
   return data as ProposalRow;
 }
 
+export async function updateDocumentProvidesFields(
+  supabase: SupabaseClient<Database>,
+  proposalId: string,
+  documentProvidesFields: boolean
+): Promise<ProposalRow> {
+  const { data, error } = await supabase
+    .rpc("update_document_provides_fields", {
+      p_proposal_id: proposalId,
+      p_document_provides_fields: documentProvidesFields,
+    })
+    .single();
+
+  if (error) throw mapRpcError(error, "update-document-provides-fields");
+  return data as ProposalRow;
+}
+
 export async function updateClientEmail(
   supabase: SupabaseClient<Database>,
   proposalId: string,

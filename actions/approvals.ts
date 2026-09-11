@@ -8,32 +8,45 @@ import {
   decideProposalApproval,
   getReviewMaterialTextForApprover,
 } from "@/lib/approvals/service";
-import { DomainError } from "@/lib/domain/errors";
+import { getProposal } from "@/lib/repositories/proposals";
+import { toLoggedActionError } from "@/lib/notifications/action-error";
+import { bestEffort, notifyApproverProposalSubmitted, notifySalespersonDecision } from "@/lib/notifications/discord";
 import type { ActionResult } from "@/lib/domain/types";
-
-function toActionError(error: unknown, stage: string) {
-  if (error instanceof DomainError) return error.toActionError();
-  return {
-    code: "VALIDATION_ERROR" as const,
-    stage,
-    message: error instanceof Error ? error.message : "Something went wrong.",
-    retrySafe: true,
-  };
-}
+import type { CurrentUser } from "@/lib/auth/current-user";
 
 export async function submitForApprovalAction(
   proposalId: string,
   expectedVersionId: string
 ): Promise<ActionResult<null>> {
+  let user: CurrentUser | undefined;
+  const supabase = await createSupabaseServerClient();
   try {
-    const user = await requireSalesperson();
-    const supabase = await createSupabaseServerClient();
+    user = await requireSalesperson();
     await submitProposalForApproval(supabase, proposalId, expectedVersionId, user);
     revalidatePath(`/proposals/${proposalId}`);
     revalidatePath("/dashboard");
+
+    await bestEffort(async () => {
+      const proposal = await getProposal(supabase, proposalId);
+      await notifyApproverProposalSubmitted({
+        proposalId,
+        clientName: proposal.client_name,
+        companyName: proposal.company_name,
+        salespersonName: proposal.salesperson_name,
+      });
+    });
+
     return { ok: true, data: null };
   } catch (error) {
-    return { ok: false, error: toActionError(error, "submit-approval") };
+    return {
+      ok: false,
+      error: await toLoggedActionError(error, "submit-approval", {
+        supabase,
+        proposalId,
+        userId: user?.userId,
+        role: user?.role,
+      }),
+    };
   }
 }
 
@@ -41,13 +54,22 @@ export async function getReviewMaterialTextAction(
   proposalId: string,
   materialId: string
 ): Promise<ActionResult<{ filename: string; extractedText: string | null }>> {
+  let user: CurrentUser | undefined;
+  const supabase = await createSupabaseServerClient();
   try {
-    await requireApprover();
-    const supabase = await createSupabaseServerClient();
+    user = await requireApprover();
     const result = await getReviewMaterialTextForApprover(supabase, proposalId, materialId);
     return { ok: true, data: result };
   } catch (error) {
-    return { ok: false, error: toActionError(error, "review-material-text") };
+    return {
+      ok: false,
+      error: await toLoggedActionError(error, "review-material-text", {
+        supabase,
+        proposalId,
+        userId: user?.userId,
+        role: user?.role,
+      }),
+    };
   }
 }
 
@@ -57,9 +79,10 @@ export async function decideApprovalAction(
   decision: "approved" | "changes_requested",
   comments: string
 ): Promise<ActionResult<null>> {
+  let user: CurrentUser | undefined;
+  const supabase = await createSupabaseServerClient();
   try {
-    await requireApprover();
-    const supabase = await createSupabaseServerClient();
+    user = await requireApprover();
     await decideProposalApproval(supabase, {
       proposalId,
       versionId,
@@ -68,8 +91,29 @@ export async function decideApprovalAction(
     });
     revalidatePath(`/approvals/${proposalId}`);
     revalidatePath("/approvals");
+
+    await bestEffort(async () => {
+      const proposal = await getProposal(supabase, proposalId);
+      await notifySalespersonDecision({
+        proposalId,
+        clientName: proposal.client_name,
+        companyName: proposal.company_name,
+        decision,
+        comments: comments.trim() || null,
+      });
+    });
+
     return { ok: true, data: null };
   } catch (error) {
-    return { ok: false, error: toActionError(error, "approval-decision") };
+    return {
+      ok: false,
+      error: await toLoggedActionError(error, "approval-decision", {
+        supabase,
+        proposalId,
+        versionId,
+        userId: user?.userId,
+        role: user?.role,
+      }),
+    };
   }
 }

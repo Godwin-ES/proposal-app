@@ -1,16 +1,18 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
-import { updateIntakeAction, updateClientEmailAction } from "@/actions/proposals";
+import { updateIntakeAction, updateClientEmailAction, updateDocumentProvidesFieldsAction } from "@/actions/proposals";
 import { proposalIntakeSchema } from "@/lib/domain/schemas";
 import type { ProposalIntake } from "@/lib/domain/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimelineInput } from "@/components/shared/timeline-input";
 import { PricingInput } from "@/components/shared/pricing-input";
@@ -25,6 +27,15 @@ type FieldConfig = {
   inputType?: string;
 };
 
+/** ProposalIntake plus the one non-intake toggle this form also saves. Kept
+ * local to this component (not part of the shared ProposalIntake domain
+ * type) since it's a generation-behavior flag, not proposal content.
+ * `proposalIntakeSchema` alone would strip this extra key during
+ * validation (zod objects default to "strip" on unknown keys), so it's
+ * extended here rather than reused as-is. */
+const intakeFormSchema = proposalIntakeSchema.extend({ documentProvidesFields: z.boolean() });
+type IntakeFormValues = ProposalIntake & { documentProvidesFields: boolean };
+
 const CLIENT_INFO_FIELDS: FieldConfig[] = [
   { name: "clientName", label: "Client Name", required: true },
   { name: "companyName", label: "Company Name", required: true },
@@ -32,6 +43,17 @@ const CLIENT_INFO_FIELDS: FieldConfig[] = [
   { name: "salespersonName", label: "Salesperson Name", required: true },
   { name: "clientEmail", label: "Client Email (delivery address)", inputType: "email" },
 ];
+
+/** Fields evaluateGenerationReadiness stops requiring when
+ * documentProvidesFields is checked — kept in sync with that function. */
+const RELAXABLE_FIELDS = new Set<keyof ProposalIntake>([
+  "clientName",
+  "companyName",
+  "clientNeedsSummary",
+  "projectScope",
+  "goalsAndObjectives",
+  "recommendedServices",
+]);
 
 const SECTIONS: { title: string; fields: FieldConfig[] }[] = [
   {
@@ -60,10 +82,16 @@ const SECTIONS: { title: string; fields: FieldConfig[] }[] = [
 export function IntakeForm({
   proposalId,
   defaultValues,
+  documentProvidesFields,
   editable,
 }: {
   proposalId: string;
   defaultValues: ProposalIntake;
+  /** Whether the salesperson has declared supporting material already
+   * contains some of these fields — relaxes which ones are required before
+   * generating (see evaluateGenerationReadiness) and lets generation draw
+   * blank ones from that material instead (see composeInitialSnapshot). */
+  documentProvidesFields: boolean;
   editable: boolean;
 }) {
   const [pending, startTransition] = useTransition();
@@ -73,8 +101,8 @@ export function IntakeForm({
     control,
     handleSubmit,
     formState: { errors, isDirty },
-  } = useForm<ProposalIntake>({
-    resolver: zodResolver(proposalIntakeSchema),
+  } = useForm<IntakeFormValues>({
+    resolver: zodResolver(intakeFormSchema),
     // TimelineInput/PricingInput always *display* a real default (1 week /
     // $0) even when the underlying field is blank, so the form's actual
     // default must match that display from the first render — otherwise the
@@ -84,39 +112,47 @@ export function IntakeForm({
       ...defaultValues,
       proposedTimeline: defaultValues.proposedTimeline || formatTimeline(1, "weeks"),
       estimatedPricing: defaultValues.estimatedPricing || formatPricing(1, "USD"),
+      documentProvidesFields,
     },
   });
 
-  function onSubmit(values: ProposalIntake) {
+  const documentProvidesFieldsValue = useWatch({ control, name: "documentProvidesFields" });
+
+  function onSubmit(values: IntakeFormValues) {
+    const { documentProvidesFields: fieldsFlag, ...intake } = values;
     startTransition(async () => {
-      // Client Email is delivery routing metadata rather than generated
-      // content, so it's still persisted through its own RPC internally —
-      // but from the user's perspective, one "Save Intake" click saves
-      // everything on this form, including email.
-      const [intakeResult, emailResult] = await Promise.all([
-        updateIntakeAction(proposalId, values),
-        updateClientEmailAction(proposalId, values.clientEmail),
+      // Client Email and the "document provides fields" flag are each saved
+      // through their own RPC internally (neither is versioned proposal
+      // content) — but from the user's perspective, one "Save Intake" click
+      // saves everything on this form.
+      const [intakeResult, emailResult, fieldsFlagResult] = await Promise.all([
+        updateIntakeAction(proposalId, intake),
+        updateClientEmailAction(proposalId, intake.clientEmail),
+        updateDocumentProvidesFieldsAction(proposalId, fieldsFlag),
       ]);
-      if (!intakeResult.ok) {
-        toast.error(
-          emailResult.ok
-            ? `Client email saved, but the rest of the intake failed: ${intakeResult.error.message}`
-            : intakeResult.error.message
-        );
-      } else if (!emailResult.ok) {
-        toast.error(`Intake saved, but the client email failed: ${emailResult.error.message}`);
-      } else {
+      const failures = [
+        !intakeResult.ok ? intakeResult.error.message : null,
+        !emailResult.ok ? `client email: ${emailResult.error.message}` : null,
+        !fieldsFlagResult.ok ? `document-provides-fields: ${fieldsFlagResult.error.message}` : null,
+      ].filter((m): m is string => m !== null);
+
+      if (failures.length === 0) {
         toast.success("Intake saved.");
+      } else if (failures.length === 1 && !intakeResult.ok) {
+        toast.error(failures[0]);
+      } else {
+        toast.error(`Some of the intake failed to save: ${failures.join("; ")}`);
       }
     });
   }
 
   function renderField(field: FieldConfig) {
+    const stillRequired = field.required && !(documentProvidesFieldsValue && RELAXABLE_FIELDS.has(field.name));
     return (
       <div key={field.name} className={field.multiline ? "sm:col-span-2 flex flex-col gap-2" : "flex flex-col gap-2"}>
         <Label htmlFor={field.name}>
           {field.label}
-          {field.required ? <span className="text-destructive"> *</span> : null}
+          {stillRequired ? <span className="text-destructive"> *</span> : null}
         </Label>
         {field.kind === "timeline" || field.kind === "pricing" ? (
           <Controller
@@ -124,9 +160,9 @@ export function IntakeForm({
             control={control}
             render={({ field: { value, onChange } }) =>
               field.kind === "timeline" ? (
-                <TimelineInput value={value} onChange={onChange} disabled={!editable || pending} />
+                <TimelineInput value={value as string} onChange={onChange} disabled={!editable || pending} />
               ) : (
-                <PricingInput value={value} onChange={onChange} disabled={!editable || pending} />
+                <PricingInput value={value as string} onChange={onChange} disabled={!editable || pending} />
               )
             }
           />
@@ -160,6 +196,30 @@ export function IntakeForm({
             <CardContent className="grid gap-4 sm:grid-cols-2">{section.fields.map(renderField)}</CardContent>
           </Card>
         ))}
+
+        <Card>
+          <CardContent className="flex flex-col gap-2 pt-6">
+            <Label className="flex items-start gap-2 font-normal">
+              <Controller
+                name="documentProvidesFields"
+                control={control}
+                render={({ field: { value, onChange } }) => (
+                  <Checkbox checked={value} onCheckedChange={onChange} disabled={!editable || pending} />
+                )}
+              />
+              <span>
+                A supporting document already contains the client/company name, needs, goals, and services below —
+                leave those fields blank and generate from the document instead.
+              </span>
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Blank fields left this way are filled from supporting material where possible when you generate; the AI
+              flags anything it can&apos;t confidently fill in, rather than guessing. Salesperson Name, Date of Call,
+              Timeline, and Pricing are unaffected by this option.
+            </p>
+          </CardContent>
+        </Card>
+
         {editable ? (
           <div>
             <Button type="submit" disabled={pending || !isDirty}>

@@ -29,6 +29,7 @@ const VALID_AI_RESULT = {
     deliverables: ["Document deliverable one", "Document deliverable two"],
     clarificationFlags: [],
     supportingMaterialUsage: [],
+    fieldsFromMaterial: { clientName: null, companyName: null, timeline: null, pricing: null },
   },
   provider: "anthropic" as const,
   model: "mock-model",

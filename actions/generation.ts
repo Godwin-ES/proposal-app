@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSalesperson } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { generateInitialDraft, regenerateSectionPreview } from "@/lib/ai/service";
-import { DomainError } from "@/lib/domain/errors";
+import { toLoggedActionError } from "@/lib/notifications/action-error";
 import type {
   ActionResult,
   ClarificationFlag,
@@ -12,30 +12,31 @@ import type {
   ProposalSectionKey,
   ProposalSnapshot,
 } from "@/lib/domain/types";
-
-function toActionError(error: unknown, stage: string) {
-  if (error instanceof DomainError) return error.toActionError();
-  return {
-    code: "AI_PROVIDER_FAILED" as const,
-    stage,
-    message: error instanceof Error ? error.message : "Generation failed unexpectedly.",
-    retrySafe: true,
-  };
-}
+import type { CurrentUser } from "@/lib/auth/current-user";
 
 export async function generateInitialDraftAction(
   proposalId: string,
   model: ClaudeModel
 ): Promise<ActionResult<{ versionId: string }>> {
+  let user: CurrentUser | undefined;
+  const supabase = await createSupabaseServerClient();
   try {
-    const user = await requireSalesperson();
-    const supabase = await createSupabaseServerClient();
+    user = await requireSalesperson();
     const version = await generateInitialDraft(supabase, proposalId, model, user);
     revalidatePath(`/proposals/${proposalId}`);
     revalidatePath("/dashboard");
     return { ok: true, data: { versionId: version.id } };
   } catch (error) {
-    return { ok: false, error: toActionError(error, "ai-generation") };
+    return {
+      ok: false,
+      error: await toLoggedActionError(error, "ai-generation", {
+        supabase,
+        proposalId,
+        userId: user?.userId,
+        role: user?.role,
+        fallbackCode: "AI_PROVIDER_FAILED",
+      }),
+    };
   }
 }
 
@@ -48,9 +49,10 @@ export async function regenerateSectionPreviewAction(
 ): Promise<
   ActionResult<{ snapshot: ProposalSnapshot; clarificationFlags: ClarificationFlag[]; generationRunId: string }>
 > {
+  let user: CurrentUser | undefined;
+  const supabase = await createSupabaseServerClient();
   try {
-    const user = await requireSalesperson();
-    const supabase = await createSupabaseServerClient();
+    user = await requireSalesperson();
     const result = await regenerateSectionPreview(
       supabase,
       proposalId,
@@ -62,6 +64,15 @@ export async function regenerateSectionPreviewAction(
     );
     return { ok: true, data: result };
   } catch (error) {
-    return { ok: false, error: toActionError(error, "ai-generation") };
+    return {
+      ok: false,
+      error: await toLoggedActionError(error, "ai-generation", {
+        supabase,
+        proposalId,
+        userId: user?.userId,
+        role: user?.role,
+        fallbackCode: "AI_PROVIDER_FAILED",
+      }),
+    };
   }
 }

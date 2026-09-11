@@ -41,7 +41,17 @@ export async function generateInitialDraft(
   }
 
   const intake = rowToIntake(proposal);
-  const generationBlockers = evaluateGenerationReadiness(intake);
+  const documentProvidesFields = proposal.document_provides_fields;
+
+  const materialsResult = await getGenerationMaterials(supabase, proposalId, user);
+  if (!materialsResult.ok) {
+    throw new DomainError("READINESS_ERROR", "generation-readiness", materialsResult.reason, true);
+  }
+
+  const generationBlockers = evaluateGenerationReadiness(intake, {
+    documentProvidesFields,
+    hasReadyMaterial: materialsResult.materials.length > 0,
+  });
   if (generationBlockers.length > 0) {
     throw new DomainError(
       "READINESS_ERROR",
@@ -49,11 +59,6 @@ export async function generateInitialDraft(
       `Cannot generate yet — missing: ${generationBlockers.join(", ")}.`,
       true
     );
-  }
-
-  const materialsResult = await getGenerationMaterials(supabase, proposalId, user);
-  if (!materialsResult.ok) {
-    throw new DomainError("READINESS_ERROR", "generation-readiness", materialsResult.reason, true);
   }
 
   const run = await insertGenerationRun(supabase, {
@@ -68,7 +73,12 @@ export async function generateInitialDraft(
 
   let aiResult;
   try {
-    aiResult = await getProvider().generate({ model, intake, supportingMaterials: materialsResult.materials });
+    aiResult = await getProvider().generate({
+      model,
+      intake,
+      supportingMaterials: materialsResult.materials,
+      documentProvidesFields,
+    });
   } catch (error) {
     await completeGenerationRun(supabase, run.id, {
       status: "failed",
@@ -77,10 +87,10 @@ export async function generateInitialDraft(
     throw error;
   }
 
-  const snapshot = composeInitialSnapshot(intake, aiResult.data);
+  const { snapshot, additionalFlags } = composeInitialSnapshot(intake, aiResult.data, documentProvidesFields);
   const contentHash = hashProposalSnapshot(snapshot);
   const approvalBlockers = evaluateApprovalReadiness({ snapshot, hasCurrentVersion: true });
-  const clarificationFlags = withFlagIds(aiResult.data.clarificationFlags);
+  const clarificationFlags = withFlagIds([...aiResult.data.clarificationFlags, ...additionalFlags]);
   const nextStatus = computeEditableStatus(approvalBlockers, openClarificationFlags(clarificationFlags));
 
   let version: VersionRow;

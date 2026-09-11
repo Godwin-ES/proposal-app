@@ -43,6 +43,14 @@ export async function updateClientEmail(supabase: SupabaseClient<Database>, prop
   return proposalsRepo.updateClientEmail(supabase, proposalId, parsed.data);
 }
 
+export async function updateDocumentProvidesFields(
+  supabase: SupabaseClient<Database>,
+  proposalId: string,
+  documentProvidesFields: boolean
+) {
+  return proposalsRepo.updateDocumentProvidesFields(supabase, proposalId, documentProvidesFields);
+}
+
 export async function withdrawSubmission(
   supabase: SupabaseClient<Database>,
   user: CurrentUser,

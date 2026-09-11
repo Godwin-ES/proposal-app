@@ -7,6 +7,7 @@ describe("generatedSectionsSchema", () => {
     projectScope: "scope",
     recommendedApproach: "approach",
     deliverables: ["one"],
+    fieldsFromMaterial: { clientName: null, companyName: null, timeline: null, pricing: null },
   };
 
   it("accepts a valid provider payload and defaults optional arrays", () => {
@@ -16,6 +17,33 @@ describe("generatedSectionsSchema", () => {
       expect(result.data.clarificationFlags).toEqual([]);
       expect(result.data.supportingMaterialUsage).toEqual([]);
     }
+  });
+
+  it("rejects a missing fieldsFromMaterial (it must always be present, even all-null)", () => {
+    const withoutFields: Record<string, unknown> = { ...valid };
+    delete withoutFields.fieldsFromMaterial;
+    expect(generatedSectionsSchema.safeParse(withoutFields).success).toBe(false);
+  });
+
+  it("accepts filled-in fieldsFromMaterial values", () => {
+    const result = generatedSectionsSchema.safeParse({
+      ...valid,
+      fieldsFromMaterial: {
+        clientName: "Jane Doe",
+        companyName: "Acme Co",
+        timeline: { amount: 6, unit: "weeks" },
+        pricing: { amount: 12000, currency: "USD" },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid timeline unit in fieldsFromMaterial", () => {
+    const result = generatedSectionsSchema.safeParse({
+      ...valid,
+      fieldsFromMaterial: { ...valid.fieldsFromMaterial, timeline: { amount: 6, unit: "fortnights" } },
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects empty deliverables", () => {

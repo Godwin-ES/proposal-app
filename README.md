@@ -37,7 +37,7 @@ Requires Node 20+ and pnpm.
 
    You'll need a Supabase project (URL + anon key), an Anthropic API key and a Resend API key. See [Environment variables](#environment-variables) below.
 
-3. Apply the database schema — run the SQL files in `supabase/migrations/` in order (001 through 005) against your Supabase project via the SQL Editor.
+3. Apply the database schema — run every SQL file in `supabase/migrations/` in order against your Supabase project via the SQL Editor.
 
 4. Start the dev server:
 
@@ -58,6 +58,9 @@ Requires Node 20+ and pnpm.
 | `RESEND_API_KEY` | Yes | Delivery email |
 | `EMAIL_FROM` | Yes | Supports `"Display Name <address>"` format |
 | `RESEND_SANDBOX_RECIPIENT` | Optional | Redirects every send to one inbox at the provider boundary only — the UI, delivery history, and readiness checks still show the real client email untouched. Useful on Resend's sandbox sender, which can only deliver to the account's own address anyway. |
+| `DISCORD_SALES_WEBHOOK_URL` | Optional | Discord notifications for the salesperson: a decision (approved / changes requested) on their proposal. |
+| `DISCORD_APPROVER_WEBHOOK_URL` | Optional | Discord notifications for the approver: a proposal submitted for approval, or a submission withdrawn. |
+| `DISCORD_ERRORS_WEBHOOK_URL` | Optional | Discord alert for unexpected/system-level errors (AI, document, delivery, material, storage failures) — also always logged to the `error_logs` table regardless of whether this is set. |
 | `TEST_SALES_EMAIL` / `TEST_SALES_PASSWORD` | Local dev/tests only | Credentials for a salesperson demo account, used by the integration and e2e suites. Never commit real credentials — set locally in `.env.local`. |
 | `TEST_APPROVER_EMAIL` / `TEST_APPROVER_PASSWORD` | Local dev/tests only | Credentials for an approver demo account, used by the integration and e2e suites. Never commit real credentials — set locally in `.env.local`. |
 
