@@ -3,6 +3,7 @@ import type { AIClarificationFlag, GeneratedSections } from "@/lib/ai/schemas";
 import { buildNextSteps } from "@/lib/templates/proposal";
 import { placeholderContent, SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { formatTimeline, formatPricing } from "@/lib/domain/quantity-fields";
+import { stripMarkdownFormatting } from "@/lib/domain/strip-markdown";
 
 const DEFAULT_TIMELINE = formatTimeline(1, "weeks");
 const DEFAULT_PRICING = formatPricing(1, "USD");
@@ -139,10 +140,10 @@ export function composeInitialSnapshot(
         salespersonName: intake.salespersonName,
       },
       content: {
-        introduction: generated.introduction,
-        projectScope: generated.projectScope,
-        recommendedApproach: generated.recommendedApproach,
-        deliverables: generated.deliverables,
+        introduction: stripMarkdownFormatting(generated.introduction),
+        projectScope: stripMarkdownFormatting(generated.projectScope),
+        recommendedApproach: stripMarkdownFormatting(generated.recommendedApproach),
+        deliverables: generated.deliverables.map(stripMarkdownFormatting),
         timeline,
         pricing,
         nextSteps: buildNextSteps(),
@@ -165,11 +166,13 @@ export function composeRegeneratedSnapshot<K extends ProposalSectionKey>(
   target: K,
   newContent: TargetContent<K>
 ): ProposalSnapshot {
+  const stripped = (Array.isArray(newContent) ? newContent.map(stripMarkdownFormatting) : stripMarkdownFormatting(newContent)) as TargetContent<K>;
+
   return {
     client: { ...currentSnapshot.client },
     content: {
       ...currentSnapshot.content,
-      [target]: newContent,
+      [target]: stripped,
     },
   };
 }

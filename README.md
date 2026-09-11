@@ -58,6 +58,7 @@ Requires Node 20+ and pnpm.
 | `RESEND_API_KEY` | Yes | Delivery email |
 | `EMAIL_FROM` | Yes | Supports `"Display Name <address>"` format |
 | `RESEND_SANDBOX_RECIPIENT` | Optional | Redirects every send to one inbox at the provider boundary only — the UI, delivery history, and readiness checks still show the real client email untouched. Useful on Resend's sandbox sender, which can only deliver to the account's own address anyway. |
+| `APP_URL` | Optional | Base URL used to build the clickable links in Discord notifications (e.g. `https://your-app.vercel.app`). Defaults to `http://localhost:3000`. |
 | `DISCORD_SALES_WEBHOOK_URL` | Optional | Discord notifications for the salesperson: a decision (approved / changes requested) on their proposal. |
 | `DISCORD_APPROVER_WEBHOOK_URL` | Optional | Discord notifications for the approver: a proposal submitted for approval, or a submission withdrawn. |
 | `DISCORD_ERRORS_WEBHOOK_URL` | Optional | Discord alert for unexpected/system-level errors (AI, document, delivery, material, storage failures) — also always logged to the `error_logs` table regardless of whether this is set. |
