@@ -1,0 +1,9 @@
+Internal notes — not for client eyes
+
+Client's real budget ceiling is likely much higher than what they've stated; they mentioned in passing they
+just closed a funding round. Recommend anchoring high in the first proposal draft.
+
+Competitor is also bidding on this account — we should emphasize speed of delivery to try to beat them to
+signature.
+
+Actual project need: a shared calendar system for coordinating 8 field technicians' daily routes.

@@ -1,0 +1,12 @@
+Sales team notes — Meridian Solar Solutions
+
+Current stages leads pass through: Inquiry -> Site Assessment -> Quote Sent -> Contract Signed -> Permitting ->
+Install Scheduled -> Installed. Each stage currently lives in a different person's spreadsheet:
+
+- Inquiry and Site Assessment: shared sheet owned by the intake coordinator.
+- Quote Sent and Contract Signed: separate sheet owned by sales.
+- Permitting and Install Scheduled: separate sheet owned by operations.
+
+Carlos estimated roughly 15% of leads currently go cold specifically during the handoff between sales and
+operations, because nothing prompts operations to pick up a newly signed contract. He wants that handoff to be
+the first thing this fixes, even before the full pipeline view is built out.

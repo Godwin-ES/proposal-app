@@ -1,0 +1,18 @@
+Discovery call notes — Cardamom & Ash Coffee Roasters
+
+Lucas runs wholesale accounts for 34 cafes across two metro areas. Order volume: roughly 210 individual
+weekly orders during a normal week, rising to near 260 around holidays.
+
+Two recurring problems he wants solved, in his own words:
+- "At least once a month someone reads a handwritten order wrong and we roast the wrong bean for a whole
+  account's week."
+- "Cafes call in when they haven't heard back, and half the time it's because the order got buried in a
+  group text, not because we ignored them."
+
+He specifically does not want cafes required to create an account with a password — he said repeatedly that
+adding friction to ordering is worse than the current error rate, and a simple order-submission link per cafe
+would be preferable to a full login system.
+
+Internal note (Lucas asked this stay out of anything shown to competitors, but it's fine for the proposal
+itself): the roasting schedule the portal would feed into is a proprietary batch-sequencing spreadsheet built
+by a former employee — any integration needs to output into that exact spreadsheet format, not replace it.

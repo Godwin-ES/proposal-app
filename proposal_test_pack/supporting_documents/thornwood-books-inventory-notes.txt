@@ -1,0 +1,11 @@
+Store manager notes — Thornwood Books
+
+Approximate active title count per location: Downtown ~9,200 titles, Riverside ~6,800 titles, Uptown ~5,400
+titles. Uptown is the newest location (opened 14 months ago) and still uses a completely different paper
+tracking format than the other two, which were at least consistent with each other.
+
+Amelia mentioned staff currently call sister stores an average of 6-8 times per day just to check stock for a
+customer standing at the counter — she'd like that number to approach zero.
+
+One constraint: the point-of-sale system used for checkout (a third-party product) is not being replaced as
+part of this project — inventory tracking needs to work alongside it, not instead of it.

@@ -1,0 +1,12 @@
+Follow-up email summary — Marrow & Finch Architecture
+
+Sophie confirmed the firm currently has 14 active client projects split across 6 architects. The two most urgent
+pain points she named on the call:
+
+1. Two projects narrowly missed permit-submission deadlines last year because nobody outside the assigned
+   architect knew the date was close.
+2. Leadership (2 partners) wants a single-page weekly view, not a full project-management suite — she was
+   explicit that the team will not adopt a tool that feels heavier than what they use today (paper notebooks).
+
+She also mentioned the firm is mid-way through licensing a document-storage tool from another vendor, so this
+system should not attempt to also handle file storage — scope should stay focused on milestone/deadline tracking.

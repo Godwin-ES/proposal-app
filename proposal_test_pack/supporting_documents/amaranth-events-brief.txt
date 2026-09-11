@@ -1,0 +1,10 @@
+Client-provided planning brief — Amaranth Events Co.
+
+Amaranth runs an average of 9 events per month, each involving between 4 and 8 outside vendors (catering, venue,
+rentals, florist, AV, photography). The two incidents Bianca specifically wants to avoid repeating:
+
+- A rental vendor showed up a day early because a date change wasn't communicated past the planner's own notes.
+- A caterer was never sent the final headcount update, resulting in a shortage at a 150-guest event.
+
+She wants any confirmation step to produce a timestamped record, since a past vendor dispute came down to "he
+said, she said" about who was told what and when.

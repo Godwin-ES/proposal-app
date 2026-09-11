@@ -1,0 +1,2 @@
+Supporting material slot 3.
+This is valid extractable text for the four-file limit test.

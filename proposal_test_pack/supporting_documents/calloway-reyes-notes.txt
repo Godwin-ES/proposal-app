@@ -1,0 +1,7 @@
+Internal discovery notes — Calloway & Reyes Law Partners
+
+- Firm has 11 attorneys across 3 practice groups (corporate, real estate, litigation).
+- Currently tracks contract review status via a shared Excel file emailed around weekly — frequently out of date within a day.
+- Two deadlines were missed in the last quarter because a reviewing partner was on leave and the file wasn't reassigned.
+- Compliance requires an audit trail of who reviewed a contract and when — this is not optional, it was raised directly by the managing partner.
+- Preferred rollout: real estate practice group first, as a pilot, before expanding to the other two groups.

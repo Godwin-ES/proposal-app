@@ -1,0 +1,9 @@
+Discovery call notes — Cobalt Street Music Academy
+
+- 22 instructors, roughly 310 active students across piano, guitar, voice, and drums.
+- Billing is currently done by one part-time admin who reconstructs each family's lesson count from a group text
+  thread at the end of every month — Julian said this alone takes her nearly 3 full days.
+- Make-up lessons for cancellations are a frequent source of billing disputes; whatever is built needs to track
+  make-up lessons distinctly from regular ones, not just lump them together.
+- Julian wants parents to be able to request a reschedule themselves within some rule (e.g. 24 hours notice)
+  rather than everything going through the admin.
