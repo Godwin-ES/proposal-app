@@ -3,24 +3,14 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, FileDown, Mail, Sparkles } from "lucide-react";
+import { CheckCircle2, FileDown, Loader2, Mail, Sparkles } from "lucide-react";
 import { generateFinalPdfAction } from "@/actions/documents";
 import { sendProposalAction } from "@/actions/delivery";
 import { ReadinessPanel } from "@/components/shared/readiness-panel";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 export function DeliveryReadiness({
   proposalId,
@@ -41,7 +31,6 @@ export function DeliveryReadiness({
 }) {
   const router = useRouter();
   const [pdfPending, startPdfTransition] = useTransition();
-  const [sendPending, startSendTransition] = useTransition();
 
   function handleGeneratePdf() {
     startPdfTransition(async () => {
@@ -55,20 +44,19 @@ export function DeliveryReadiness({
     });
   }
 
-  function handleSend() {
-    startSendTransition(async () => {
-      const result = await sendProposalAction(proposalId, versionId);
-      if (result.ok) {
-        toast.success(
-          result.data.status === "sent"
-            ? "Proposal sent to the client."
-            : "Delivery outcome uncertain — check delivery history before resending."
-        );
-        router.refresh();
-      } else {
-        toast.error(result.error.message);
-      }
-    });
+  async function handleSend(): Promise<boolean> {
+    const result = await sendProposalAction(proposalId, versionId);
+    if (result.ok) {
+      toast.success(
+        result.data.status === "sent"
+          ? "Proposal sent to the client."
+          : "Delivery outcome uncertain — check delivery history before resending."
+      );
+      router.refresh();
+      return true;
+    }
+    toast.error(result.error.message);
+    return false;
   }
 
   const canSend = blockers.length === 0;
@@ -108,7 +96,8 @@ export function DeliveryReadiness({
             <div className="flex flex-wrap gap-2">
               {pdfStatus !== "ready" ? (
                 <Button onClick={handleGeneratePdf} disabled={pdfPending} variant="secondary">
-                  <Sparkles className="size-4" /> {pdfPending ? "Generating..." : "Generate Final PDF"}
+                  {pdfPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                  {pdfPending ? "Generating..." : "Generate Final PDF"}
                 </Button>
               ) : (
                 <Button asChild variant="secondary">
@@ -118,26 +107,18 @@ export function DeliveryReadiness({
                 </Button>
               )}
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button disabled={!canSend || sendPending}>
-                    <Mail className="size-4" /> {sendPending ? "Sending..." : "Send Proposal"}
+              <ConfirmDialog
+                trigger={
+                  <Button disabled={!canSend || pdfPending}>
+                    <Mail className="size-4" /> Send Proposal
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Send this proposal to {recipient}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This sends the exact approved PDF to the client and marks the proposal delivered. This cannot
-                      be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleSend}>Send</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                }
+                title={`Send this proposal to ${recipient}?`}
+                description="This sends the exact approved PDF to the client and marks the proposal delivered. This cannot be undone."
+                confirmLabel="Send"
+                pendingLabel="Sending..."
+                onConfirm={handleSend}
+              />
             </div>
           </>
         )}

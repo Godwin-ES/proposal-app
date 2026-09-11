@@ -47,9 +47,16 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   size = "default",
+  closeDisabled = false,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm"
+  /** Blocks Escape-key dismissal while an operation this dialog owns is
+   * still running (outside click is already blocked by AlertDialog itself).
+   * Pass `pending` state straight through, and also disable Cancel/Action
+   * while pending — this alone doesn't do that. */
+  closeDisabled?: boolean
 }) {
   return (
     <AlertDialogPortal>
@@ -61,6 +68,10 @@ function AlertDialogContent({
           "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
+        onEscapeKeyDown={(e) => {
+          if (closeDisabled) e.preventDefault()
+          onEscapeKeyDown?.(e)
+        }}
         {...props}
       />
     </AlertDialogPortal>

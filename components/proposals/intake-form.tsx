@@ -98,9 +98,13 @@ export function IntakeForm({
         updateClientEmailAction(proposalId, values.clientEmail),
       ]);
       if (!intakeResult.ok) {
-        toast.error(intakeResult.error.message);
+        toast.error(
+          emailResult.ok
+            ? `Client email saved, but the rest of the intake failed: ${intakeResult.error.message}`
+            : intakeResult.error.message
+        );
       } else if (!emailResult.ok) {
-        toast.error(emailResult.error.message);
+        toast.error(`Intake saved, but the client email failed: ${emailResult.error.message}`);
       } else {
         toast.success("Intake saved.");
       }
@@ -120,16 +124,16 @@ export function IntakeForm({
             control={control}
             render={({ field: { value, onChange } }) =>
               field.kind === "timeline" ? (
-                <TimelineInput value={value} onChange={onChange} disabled={!editable} />
+                <TimelineInput value={value} onChange={onChange} disabled={!editable || pending} />
               ) : (
-                <PricingInput value={value} onChange={onChange} disabled={!editable} />
+                <PricingInput value={value} onChange={onChange} disabled={!editable || pending} />
               )
             }
           />
         ) : field.multiline ? (
-          <Textarea id={field.name} disabled={!editable} rows={4} {...register(field.name)} />
+          <Textarea id={field.name} disabled={!editable || pending} rows={4} {...register(field.name)} />
         ) : (
-          <Input id={field.name} type={field.inputType} disabled={!editable} {...register(field.name)} />
+          <Input id={field.name} type={field.inputType} disabled={!editable || pending} {...register(field.name)} />
         )}
         {errors[field.name] ? <p className="text-sm text-destructive">{errors[field.name]?.message as string}</p> : null}
       </div>

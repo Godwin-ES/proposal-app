@@ -21,6 +21,7 @@ export function InlineSectionCard({
   onSave,
   extraActions,
   description,
+  locked = false,
 }: {
   title: string;
   /** The raw editable string (for Deliverables, this is the list joined by newlines). */
@@ -33,6 +34,12 @@ export function InlineSectionCard({
   extraActions?: ReactNode;
   /** Shown above the textarea while editing, e.g. "One deliverable per line." */
   description?: string;
+  /** Hides the inline "Edit" pencil (but keeps `extraActions` mounted and
+   * visible) while some other operation elsewhere on the page has claimed
+   * the shared draft — e.g. another section is mid-regeneration. Keeping
+   * `extraActions` mounted matters: it may itself be an in-progress dialog
+   * (like Regenerate) whose own state would be lost if it unmounted. */
+  locked?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -69,9 +76,11 @@ export function InlineSectionCard({
         {editable && !editing ? (
           <CardAction>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" aria-label={`Edit ${title}`} onClick={startEditing}>
-                <Pencil className="size-4" />
-              </Button>
+              {!locked ? (
+                <Button variant="ghost" size="icon" aria-label={`Edit ${title}`} onClick={startEditing}>
+                  <Pencil className="size-4" />
+                </Button>
+              ) : null}
               {extraActions}
             </div>
           </CardAction>
@@ -86,6 +95,7 @@ export function InlineSectionCard({
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               autoFocus
+              disabled={saving}
               className="min-h-0 resize-none overflow-hidden text-sm leading-relaxed text-foreground/90 md:text-sm"
             />
             <div className="flex justify-end gap-2">

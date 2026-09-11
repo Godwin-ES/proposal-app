@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -27,17 +27,16 @@ import { VersionHistory, type VersionHistoryEntry } from "@/components/proposals
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Loader2, Pencil, Send, X } from "lucide-react";
-import type { ClarificationFlag, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
+import type { ClarificationFlag, ProposalSectionKey, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
 import { DELETABLE_STATUSES } from "@/lib/domain/types";
 import { SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { diffChangedSections } from "@/lib/domain/snapshot-diff";
@@ -80,10 +79,15 @@ export function ProposalWorkspace({
   clientEmail: string;
 }) {
   const router = useRouter();
-  const [submitting, startSubmitTransition] = useTransition();
-  const [withdrawing, startWithdrawTransition] = useTransition();
   const [saving, setSaving] = useState(false);
   const [dismissingFlagId, setDismissingFlagId] = useState<string | null>(null);
+  // Regenerating a section rebuilds `draft` from a snapshot captured when the
+  // request started; any other edit made to `draft` in the meantime (another
+  // regeneration, an inline edit, Timeline/Pricing) would get silently
+  // clobbered when that result lands. Only one section may regenerate at a
+  // time, and everything else that writes to `draft` is locked while it does.
+  const [regeneratingSection, setRegeneratingSection] = useState<ProposalSectionKey | null>(null);
+  const [pendingRevertVersion, setPendingRevertVersion] = useState<VersionHistoryEntry | null>(null);
 
   // Accumulates across however many regenerations happen before the batch is
   // actually saved — a fresh clarification flag only becomes real once Save
@@ -113,6 +117,7 @@ export function ProposalWorkspace({
 
   const dirtySections = diffChangedSections(snapshot, draft);
   const isDirty = dirtySections.length > 0;
+  const draftLocked = regeneratingSection !== null;
 
   useEffect(() => {
     if (!isDirty) return;
@@ -124,28 +129,26 @@ export function ProposalWorkspace({
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  function handleSubmitForApproval() {
-    startSubmitTransition(async () => {
-      const result = await submitForApprovalAction(proposalId, versionId);
-      if (result.ok) {
-        toast.success("Submitted for approval.");
-        router.refresh();
-      } else {
-        toast.error(result.error.message);
-      }
-    });
+  async function handleSubmitForApproval(): Promise<boolean> {
+    const result = await submitForApprovalAction(proposalId, versionId);
+    if (result.ok) {
+      toast.success("Submitted for approval.");
+      router.refresh();
+      return true;
+    }
+    toast.error(result.error.message);
+    return false;
   }
 
-  function handleWithdraw() {
-    startWithdrawTransition(async () => {
-      const result = await withdrawSubmissionAction(proposalId);
-      if (result.ok) {
-        toast.success("Submission withdrawn — back to Draft.");
-        router.refresh();
-      } else {
-        toast.error(result.error.message);
-      }
-    });
+  async function handleWithdraw(): Promise<boolean> {
+    const result = await withdrawSubmissionAction(proposalId);
+    if (result.ok) {
+      toast.success("Submission withdrawn — back to Draft.");
+      router.refresh();
+      return true;
+    }
+    toast.error(result.error.message);
+    return false;
   }
 
   /** Updates the local draft only — does not touch the database. Matches the
@@ -186,11 +189,22 @@ export function ProposalWorkspace({
     toast.info("Unsaved changes discarded.");
   }
 
-  function handleRevert(version: VersionHistoryEntry) {
+  function applyRevert(version: VersionHistoryEntry) {
     setDraft(version.snapshot);
     setPendingRegenFlags([]);
     setPendingRegenRunIds([]);
     toast.info(`Loaded v${version.versionNumber} — review below and Save Version to apply.`);
+  }
+
+  /** Reverting replaces the whole draft, so if there are unsaved edits
+   * sitting in it already, confirm first rather than silently discarding
+   * them — otherwise this is a straight replace. */
+  function handleRevert(version: VersionHistoryEntry) {
+    if (isDirty) {
+      setPendingRevertVersion(version);
+      return;
+    }
+    applyRevert(version);
   }
 
   /** Drops a regeneration's result straight into the draft buffer — no
@@ -234,6 +248,14 @@ export function ProposalWorkspace({
         <Pencil className="size-4" />
       </Button>
     );
+  }
+
+  function handleRegenerationStart(section: ProposalSectionKey) {
+    setRegeneratingSection(section);
+  }
+
+  function handleRegenerationEnd() {
+    setRegeneratingSection(null);
   }
 
   return (
@@ -333,58 +355,38 @@ export function ProposalWorkspace({
             something first? You can withdraw it back to Draft as long as no decision has been made yet.
           </p>
           <div className="mt-3">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="secondary" disabled={withdrawing}>
-                  {withdrawing ? "Withdrawing..." : "Withdraw Submission"}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Withdraw this submission?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This returns the proposal to Draft so you can make changes and resubmit. Nothing in its version
-                    history is lost.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleWithdraw}>Withdraw</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmDialog
+              trigger={<Button variant="secondary">Withdraw Submission</Button>}
+              title="Withdraw this submission?"
+              description="This returns the proposal to Draft so you can make changes and resubmit. Nothing in its version history is lost."
+              confirmLabel="Withdraw"
+              pendingLabel="Withdrawing..."
+              onConfirm={handleWithdraw}
+            />
           </div>
         </div>
       ) : null}
 
       {canSubmitForApproval ? (
         <div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button disabled={submitting || isDirty} title={isDirty ? "Save or discard your unsaved changes first." : undefined}>
-                <Send className="size-4" /> {submitting ? "Submitting..." : "Submit for Approval"}
+          <ConfirmDialog
+            trigger={
+              <Button disabled={isDirty} title={isDirty ? "Save or discard your unsaved changes first." : undefined}>
+                <Send className="size-4" /> Submit for Approval
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Submit version {versionNumber} for approval?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This proposal becomes read-only until an approver decides. You will not be able to edit or
-                  regenerate content while it is pending.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleSubmitForApproval}>Submit</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            }
+            title={`Submit version ${versionNumber} for approval?`}
+            description="This proposal becomes read-only until an approver decides. You will not be able to edit or regenerate content while it is pending."
+            confirmLabel="Submit"
+            pendingLabel="Submitting..."
+            onConfirm={handleSubmitForApproval}
+          />
         </div>
       ) : null}
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Client Details</h2>
-        {editable ? (
+        {editable && !draftLocked ? (
           <ProposalDetailsEditor
             client={draft.client}
             clientEmail={clientEmail}
@@ -401,6 +403,7 @@ export function ProposalWorkspace({
         value={draft.content.introduction}
         displayContent={draft.content.introduction}
         editable={editable}
+        locked={draftLocked}
         onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, introduction: value } })}
         extraActions={
           <RegenerateSectionDialog
@@ -410,6 +413,9 @@ export function ProposalWorkspace({
             materialCount={materialCount}
             currentSnapshot={draft}
             onRegenerated={handleRegenerated}
+            disabled={draftLocked && regeneratingSection !== "introduction"}
+            onRegenerationStart={() => handleRegenerationStart("introduction")}
+            onRegenerationEnd={handleRegenerationEnd}
           />
         }
       />
@@ -419,6 +425,7 @@ export function ProposalWorkspace({
         value={draft.content.projectScope}
         displayContent={draft.content.projectScope}
         editable={editable}
+        locked={draftLocked}
         onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, projectScope: value } })}
         extraActions={
           <RegenerateSectionDialog
@@ -428,6 +435,9 @@ export function ProposalWorkspace({
             materialCount={materialCount}
             currentSnapshot={draft}
             onRegenerated={handleRegenerated}
+            disabled={draftLocked && regeneratingSection !== "projectScope"}
+            onRegenerationStart={() => handleRegenerationStart("projectScope")}
+            onRegenerationEnd={handleRegenerationEnd}
           />
         }
       />
@@ -437,6 +447,7 @@ export function ProposalWorkspace({
         value={draft.content.recommendedApproach}
         displayContent={draft.content.recommendedApproach}
         editable={editable}
+        locked={draftLocked}
         onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, recommendedApproach: value } })}
         extraActions={
           <RegenerateSectionDialog
@@ -446,6 +457,9 @@ export function ProposalWorkspace({
             materialCount={materialCount}
             currentSnapshot={draft}
             onRegenerated={handleRegenerated}
+            disabled={draftLocked && regeneratingSection !== "recommendedApproach"}
+            onRegenerationStart={() => handleRegenerationStart("recommendedApproach")}
+            onRegenerationEnd={handleRegenerationEnd}
           />
         }
       />
@@ -462,6 +476,7 @@ export function ProposalWorkspace({
         }
         description="One deliverable per line."
         editable={editable}
+        locked={draftLocked}
         onSave={(value) =>
           updateDraft({
             ...draft,
@@ -482,6 +497,9 @@ export function ProposalWorkspace({
             materialCount={materialCount}
             currentSnapshot={draft}
             onRegenerated={handleRegenerated}
+            disabled={draftLocked && regeneratingSection !== "deliverables"}
+            onRegenerationStart={() => handleRegenerationStart("deliverables")}
+            onRegenerationEnd={handleRegenerationEnd}
           />
         }
       />
@@ -491,12 +509,14 @@ export function ProposalWorkspace({
           title="Timeline"
           content={draft.content.timeline}
           actions={
-            editable ? (
+            editable && !draftLocked ? (
               <ProposalEditorDialog
                 trigger={editButton("Timeline")}
                 title="Edit Timeline"
                 initialValue={draft.content.timeline}
-                renderInput={(value, onChange) => <TimelineInput value={value} onChange={onChange} />}
+                renderInput={(value, onChange, disabled) => (
+                  <TimelineInput value={value} onChange={onChange} disabled={disabled} />
+                )}
                 onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, timeline: value } })}
               />
             ) : null
@@ -506,12 +526,14 @@ export function ProposalWorkspace({
           title="Pricing"
           content={draft.content.pricing}
           actions={
-            editable ? (
+            editable && !draftLocked ? (
               <ProposalEditorDialog
                 trigger={editButton("Pricing")}
                 title="Edit Pricing"
                 initialValue={draft.content.pricing}
-                renderInput={(value, onChange) => <PricingInput value={value} onChange={onChange} />}
+                renderInput={(value, onChange, disabled) => (
+                  <PricingInput value={value} onChange={onChange} disabled={disabled} />
+                )}
                 onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, pricing: value } })}
               />
             ) : null
@@ -524,12 +546,13 @@ export function ProposalWorkspace({
         value={draft.content.nextSteps}
         displayContent={draft.content.nextSteps}
         editable={editable}
+        locked={draftLocked}
         onSave={(value) => updateDraft({ ...draft, content: { ...draft.content, nextSteps: value } })}
       />
 
       <div>
         <h2 className="mb-3 text-lg font-medium">Version History</h2>
-        <VersionHistory versions={versions} editable={editable} onRevert={handleRevert} />
+        <VersionHistory versions={versions} editable={editable && !draftLocked} onRevert={handleRevert} />
       </div>
 
       {isDirty ? (
@@ -543,18 +566,51 @@ export function ProposalWorkspace({
                 {" "}
                 ({dirtySections.map((s) => SECTION_DISPLAY_LABELS[s]).join(", ")})
               </span>
+              {draftLocked ? (
+                <span className="text-muted-foreground"> — waiting for the regeneration in progress to finish</span>
+              ) : null}
             </p>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={handleDiscardDraft} disabled={saving}>
+              <Button variant="secondary" size="sm" onClick={handleDiscardDraft} disabled={saving || draftLocked}>
                 Discard
               </Button>
-              <Button size="sm" onClick={handleSaveVersion} disabled={saving}>
+              <Button size="sm" onClick={handleSaveVersion} disabled={saving || draftLocked}>
                 {saving ? "Saving..." : "Save Version"}
               </Button>
             </div>
           </div>
         </div>
       ) : null}
+
+      <AlertDialog
+        open={pendingRevertVersion !== null}
+        onOpenChange={(next) => {
+          if (!next) setPendingRevertVersion(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes and revert?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingRevertVersion
+                ? `You have unsaved changes to ${dirtySections.map((s) => SECTION_DISPLAY_LABELS[s]).join(", ")}. Loading v${pendingRevertVersion.versionNumber} replaces your current draft with it — the unsaved changes above will be lost.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingRevertVersion) applyRevert(pendingRevertVersion);
+                setPendingRevertVersion(null);
+              }}
+            >
+              Discard and Revert
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

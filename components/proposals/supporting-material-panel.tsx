@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Eye, FileWarning, FileCheck2, FileClock, Loader2, Trash2, RotateCw, Upload } from "lucide-react";
@@ -15,6 +15,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MaterialTextDialog } from "@/components/shared/material-text-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 export type MaterialSummary = {
   id: string;
@@ -38,7 +39,6 @@ export function SupportingMaterialPanel({
   const router = useRouter();
   const [materials, setMaterials] = useState(initialMaterials);
   const [uploading, setUploading] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [busyMaterialId, setBusyMaterialId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,34 +110,31 @@ export function SupportingMaterialPanel({
     }
   }
 
-  function handleRetry(materialId: string) {
+  async function handleRetry(materialId: string) {
     setBusyMaterialId(materialId);
-    startTransition(async () => {
-      const result = await retryMaterialExtractionAction(proposalId, materialId);
-      setBusyMaterialId(null);
-      if (!result.ok) {
-        toast.error(result.error.message);
-        return;
-      }
-      const { extractionStatus, warning } = result.data;
-      setMaterials((prev) => prev.map((m) => (m.id === materialId ? { ...m, extractionStatus, warning } : m)));
-      if (extractionStatus === "ready") toast.success("Extraction succeeded.");
-      router.refresh();
-    });
+    const result = await retryMaterialExtractionAction(proposalId, materialId);
+    setBusyMaterialId(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    const { extractionStatus, warning } = result.data;
+    setMaterials((prev) => prev.map((m) => (m.id === materialId ? { ...m, extractionStatus, warning } : m)));
+    if (extractionStatus === "ready") toast.success("Extraction succeeded.");
+    router.refresh();
   }
 
-  function handleRemove(materialId: string) {
+  async function handleRemove(materialId: string): Promise<boolean> {
     setBusyMaterialId(materialId);
-    startTransition(async () => {
-      const result = await removeMaterialAction(proposalId, materialId);
-      setBusyMaterialId(null);
-      if (result.ok) {
-        setMaterials((prev) => prev.filter((m) => m.id !== materialId));
-        router.refresh();
-      } else {
-        toast.error(result.error.message);
-      }
-    });
+    const result = await removeMaterialAction(proposalId, materialId);
+    setBusyMaterialId(null);
+    if (result.ok) {
+      setMaterials((prev) => prev.filter((m) => m.id !== materialId));
+      router.refresh();
+      return true;
+    }
+    toast.error(result.error.message);
+    return false;
   }
 
   return (
@@ -184,29 +181,38 @@ export function SupportingMaterialPanel({
                           variant="ghost"
                           size="icon"
                           aria-label={`Retry extracting ${material.filename}`}
-                          disabled={isPending}
+                          disabled={busyMaterialId === material.id}
                           onClick={() => handleRetry(material.id)}
                         >
-                          {isPending && busyMaterialId === material.id ? (
+                          {busyMaterialId === material.id ? (
                             <Loader2 className="size-4 animate-spin" />
                           ) : (
                             <RotateCw className="size-4" />
                           )}
                         </Button>
                       ) : null}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Remove ${material.filename}`}
-                        disabled={isPending}
-                        onClick={() => handleRemove(material.id)}
-                      >
-                        {isPending && busyMaterialId === material.id ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-4" />
-                        )}
-                      </Button>
+                      <ConfirmDialog
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Remove ${material.filename}`}
+                            disabled={busyMaterialId === material.id}
+                          >
+                            {busyMaterialId === material.id ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
+                          </Button>
+                        }
+                        title="Remove this file?"
+                        description={`${material.filename} will no longer be used as context for generation or regeneration.`}
+                        confirmLabel="Remove"
+                        pendingLabel="Removing..."
+                        confirmVariant="destructive"
+                        onConfirm={() => handleRemove(material.id)}
+                      />
                     </>
                   ) : null}
                 </div>
@@ -233,7 +239,7 @@ export function SupportingMaterialPanel({
               disabled={uploading || materials.length >= 3}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className="size-4" />
+              {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
               {uploading ? "Uploading..." : "Upload File"}
             </Button>
             <p className="mt-2 text-xs text-muted-foreground">

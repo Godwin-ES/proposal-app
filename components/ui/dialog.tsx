@@ -51,9 +51,18 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeDisabled = false,
+  onEscapeKeyDown,
+  onPointerDownOutside,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /** Blocks every dismiss path except an explicit in-content button while an
+   * operation this dialog owns is still running: Escape, an outside
+   * click/overlay press, and the X button (disabled, not hidden, so the
+   * layout doesn't shift). Pass `pending` state straight through. */
+  closeDisabled?: boolean
 }) {
   return (
     <DialogPortal>
@@ -64,6 +73,18 @@ function DialogContent({
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
+        onEscapeKeyDown={(e) => {
+          if (closeDisabled) e.preventDefault()
+          onEscapeKeyDown?.(e)
+        }}
+        onPointerDownOutside={(e) => {
+          if (closeDisabled) e.preventDefault()
+          onPointerDownOutside?.(e)
+        }}
+        onInteractOutside={(e) => {
+          if (closeDisabled) e.preventDefault()
+          onInteractOutside?.(e)
+        }}
         {...props}
       >
         {children}
@@ -73,6 +94,7 @@ function DialogContent({
               variant="ghost"
               className="absolute top-2 right-2"
               size="icon-sm"
+              disabled={closeDisabled}
             >
               <XIcon
               />

@@ -8,17 +8,7 @@ import { decideApprovalAction } from "@/actions/approvals";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 export function ApprovalDecisionPanel({
   proposalId,
@@ -31,22 +21,29 @@ export function ApprovalDecisionPanel({
 }) {
   const [comments, setComments] = useState("");
   const [pending, startTransition] = useTransition();
-  const [decidingAction, setDecidingAction] = useState<"approved" | "changes_requested" | null>(null);
   const router = useRouter();
 
-  function decide(decision: "approved" | "changes_requested") {
-    setDecidingAction(decision);
+  function requestChanges() {
     startTransition(async () => {
-      const result = await decideApprovalAction(proposalId, versionId, decision, comments);
+      const result = await decideApprovalAction(proposalId, versionId, "changes_requested", comments);
       if (result.ok) {
-        toast.success(decision === "approved" ? "Proposal approved." : "Changes requested.");
+        toast.success("Changes requested.");
         router.push("/approvals");
-        router.refresh();
       } else {
-        setDecidingAction(null);
         toast.error(result.error.message);
       }
     });
+  }
+
+  async function approve(): Promise<boolean> {
+    const result = await decideApprovalAction(proposalId, versionId, "approved", comments);
+    if (result.ok) {
+      toast.success("Proposal approved.");
+      router.push("/approvals");
+      return true;
+    }
+    toast.error(result.error.message);
+    return false;
   }
 
   return (
@@ -60,33 +57,31 @@ export function ApprovalDecisionPanel({
           value={comments}
           onChange={(e) => setComments(e.target.value)}
           rows={3}
+          disabled={pending}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => decide("changes_requested")} disabled={pending}>
+          <Button variant="secondary" onClick={requestChanges} disabled={pending}>
             <X className="size-4" />
-            {pending && decidingAction === "changes_requested" ? "Requesting Changes..." : "Request Changes"}
+            {pending ? "Requesting Changes..." : "Request Changes"}
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <ConfirmDialog
+            trigger={
               <Button disabled={pending}>
                 <Check className="size-4" />
-                {pending && decidingAction === "approved" ? "Approving..." : "Approve Proposal"}
+                Approve Proposal
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Approve version {versionNumber}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  You are authorizing exactly version {versionNumber} of this proposal for client delivery. Any
-                  later revision will require a new approval.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => decide("approved")}>Approve</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            }
+            title={`Approve version ${versionNumber}?`}
+            description={
+              <>
+                You are authorizing exactly version {versionNumber} of this proposal for client delivery. Any later
+                revision will require a new approval.
+              </>
+            }
+            confirmLabel="Approve"
+            pendingLabel="Approving..."
+            onConfirm={approve}
+          />
         </div>
       </CardContent>
     </Card>

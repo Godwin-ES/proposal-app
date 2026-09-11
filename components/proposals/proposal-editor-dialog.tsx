@@ -29,7 +29,7 @@ export function ProposalEditorDialog({
   initialValue: string;
   multiline?: boolean;
   /** Overrides the default Textarea/input with a custom controlled input (e.g. TimelineInput/PricingInput). */
-  renderInput?: (value: string, onChange: (value: string) => void) => ReactNode;
+  renderInput?: (value: string, onChange: (value: string) => void, disabled: boolean) => ReactNode;
   onSave: (value: string) => Promise<boolean>;
 }) {
   const [open, setOpen] = useState(false);
@@ -47,25 +47,27 @@ export function ProposalEditorDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        if (saving) return;
         if (next) setValue(initialValue);
         setOpen(next);
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent closeDisabled={saving}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         {renderInput ? (
-          renderInput(value, setValue)
+          renderInput(value, setValue, saving)
         ) : multiline ? (
-          <Textarea rows={8} value={value} onChange={(e) => setValue(e.target.value)} />
+          <Textarea rows={8} value={value} onChange={(e) => setValue(e.target.value)} disabled={saving} />
         ) : (
           <input
             className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            disabled={saving}
           />
         )}
         <DialogFooter>

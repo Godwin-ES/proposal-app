@@ -51,6 +51,7 @@ export function ProposalDetailsEditor({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        if (saving) return;
         if (next) {
           setValues(client);
           setEmail(clientEmail);
@@ -63,7 +64,7 @@ export function ProposalDetailsEditor({
           <Pencil className="size-4" /> Edit Details
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent closeDisabled={saving}>
         <DialogHeader>
           <DialogTitle>Client Details</DialogTitle>
         </DialogHeader>
@@ -74,6 +75,7 @@ export function ProposalDetailsEditor({
               id="edit-clientName"
               value={values.clientName}
               onChange={(e) => setValues((v) => ({ ...v, clientName: e.target.value }))}
+              disabled={saving}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -82,6 +84,7 @@ export function ProposalDetailsEditor({
               id="edit-companyName"
               value={values.companyName}
               onChange={(e) => setValues((v) => ({ ...v, companyName: e.target.value }))}
+              disabled={saving}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -91,6 +94,7 @@ export function ProposalDetailsEditor({
               type="date"
               value={values.dateOfCall}
               onChange={(e) => setValues((v) => ({ ...v, dateOfCall: e.target.value }))}
+              disabled={saving}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -99,6 +103,7 @@ export function ProposalDetailsEditor({
               id="edit-salespersonName"
               value={values.salespersonName}
               onChange={(e) => setValues((v) => ({ ...v, salespersonName: e.target.value }))}
+              disabled={saving}
             />
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
@@ -109,6 +114,7 @@ export function ProposalDetailsEditor({
               value={email}
               placeholder="client@company.com"
               onChange={(e) => setEmail(e.target.value)}
+              disabled={saving}
             />
             <p className="text-xs text-muted-foreground">Saved separately — never creates a new proposal version.</p>
           </div>

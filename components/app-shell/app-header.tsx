@@ -1,11 +1,10 @@
-import { LogOut } from "lucide-react";
 import { signOut } from "@/actions/auth";
 import { MobileNav } from "@/components/app-shell/mobile-nav";
+import { SignOutMenuItem } from "@/components/app-shell/sign-out-button";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -45,13 +44,7 @@ export function AppHeader({ user }: { user: CurrentUser }) {
             <div className="text-xs font-normal text-muted-foreground">{user.email}</div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <form action={signOut} className="w-full">
-              <button type="submit" className="flex w-full items-center gap-2">
-                <LogOut className="size-4" /> Sign out
-              </button>
-            </form>
-          </DropdownMenuItem>
+          <SignOutMenuItem action={signOut} />
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

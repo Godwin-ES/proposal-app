@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { regenerateSectionPreviewAction } from "@/actions/generation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,9 @@ export function RegenerateSectionDialog({
   materialCount,
   currentSnapshot,
   onRegenerated,
+  disabled = false,
+  onRegenerationStart,
+  onRegenerationEnd,
 }: {
   proposalId: string;
   targetSection: ProposalSectionKey;
@@ -42,6 +45,16 @@ export function RegenerateSectionDialog({
     clarificationFlags: ClarificationFlag[];
     generationRunId: string;
   }) => void;
+  /** Disables opening this dialog — used while a *different* section is
+   * already regenerating, since a second concurrent regeneration would race
+   * with the first over the same shared draft. */
+  disabled?: boolean;
+  /** Fired the moment this section's regeneration starts/ends, so the
+   * caller can lock everything else that writes to the shared draft
+   * (other sections' Regenerate/Edit, Timeline/Pricing, Client Details)
+   * until this one is done. */
+  onRegenerationStart?: () => void;
+  onRegenerationEnd?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
@@ -50,8 +63,10 @@ export function RegenerateSectionDialog({
 
   async function handleRegenerate() {
     setPending(true);
+    onRegenerationStart?.();
     const result = await regenerateSectionPreviewAction(proposalId, targetSection, instruction, model, currentSnapshot);
     setPending(false);
+    onRegenerationEnd?.();
     if (result.ok) {
       onRegenerated(result.data);
       toast.success(`${sectionLabel} regenerated — review and Save Version to apply.`);
@@ -63,13 +78,19 @@ export function RegenerateSectionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (pending) return;
+        setOpen(next);
+      }}
+    >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Regenerate ${sectionLabel}`}>
+        <Button variant="ghost" size="icon" aria-label={`Regenerate ${sectionLabel}`} disabled={disabled}>
           <Sparkles className="size-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent closeDisabled={pending}>
         <DialogHeader>
           <DialogTitle>Regenerate: {sectionLabel}</DialogTitle>
           <DialogDescription>
@@ -83,7 +104,7 @@ export function RegenerateSectionDialog({
             <label className="text-sm font-medium" htmlFor="regen-model">
               Claude Model
             </label>
-            <Select value={model} onValueChange={(v) => setModel(v as ClaudeModel)}>
+            <Select value={model} onValueChange={(v) => setModel(v as ClaudeModel)} disabled={pending}>
               <SelectTrigger id="regen-model" className="w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -107,6 +128,7 @@ export function RegenerateSectionDialog({
               placeholder={`Tell the model how to change ${sectionLabel.toLowerCase()}...`}
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
+              disabled={pending}
             />
           </div>
 
@@ -122,7 +144,13 @@ export function RegenerateSectionDialog({
             Cancel
           </Button>
           <Button onClick={handleRegenerate} disabled={pending || !instruction.trim()}>
-            {pending ? "Regenerating..." : "Regenerate"}
+            {pending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> Regenerating...
+              </>
+            ) : (
+              "Regenerate"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

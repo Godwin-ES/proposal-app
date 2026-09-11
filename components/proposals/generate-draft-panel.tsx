@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { generateInitialDraftAction } from "@/actions/generation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +37,7 @@ export function GenerateDraftPanel({ proposalId, ready }: { proposalId: string; 
           <label className="text-sm font-medium" htmlFor="ai-model">
             Claude Model
           </label>
-          <Select value={model} onValueChange={(v) => setModel(v as ClaudeModel)}>
+          <Select value={model} onValueChange={(v) => setModel(v as ClaudeModel)} disabled={pending}>
             <SelectTrigger id="ai-model" className="w-48">
               <SelectValue />
             </SelectTrigger>
@@ -51,7 +51,7 @@ export function GenerateDraftPanel({ proposalId, ready }: { proposalId: string; 
           </Select>
         </div>
         <Button onClick={handleGenerate} disabled={!ready || pending}>
-          <Sparkles className="size-4" />
+          {pending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
           {pending ? "Generating..." : "Generate Draft"}
         </Button>
         {!ready ? (
