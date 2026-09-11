@@ -13,7 +13,6 @@ import { salesTestAccount, approverTestAccount, hasTestAccountCredentials } from
 const mockGenerate = vi.fn();
 vi.mock("@/lib/ai/provider", () => ({
   getProvider: () => ({ generate: mockGenerate, regenerateSection: vi.fn() }),
-  defaultModelFor: () => "mock-model",
 }));
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -84,7 +83,7 @@ describe.skipIf(!hasCredentials)("immutable versioning (hosted Supabase integrat
     proposalIds.push(proposal.id);
     await admin.from("proposals").update(COMPLETE_INTAKE).eq("id", proposal.id);
     mockGenerate.mockResolvedValueOnce(VALID_AI_RESULT);
-    const version = await generateInitialDraft(salesClient, proposal.id, "anthropic", salesUser);
+    const version = await generateInitialDraft(salesClient, proposal.id, "claude-sonnet-5", salesUser);
     return { proposalId: proposal.id, version };
   }
 

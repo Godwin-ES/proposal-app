@@ -10,7 +10,6 @@ import { salesTestAccount, approverTestAccount, hasTestAccountCredentials } from
 const mockGenerate = vi.fn();
 vi.mock("@/lib/ai/provider", () => ({
   getProvider: () => ({ generate: mockGenerate, regenerateSection: vi.fn() }),
-  defaultModelFor: () => "mock-model",
 }));
 
 const { generateInitialDraft } = await import("@/lib/ai/service");
@@ -91,7 +90,7 @@ describe.skipIf(!hasCredentials)("final PDF generation (hosted Supabase integrat
     proposalIds.push(proposal.id);
     await admin.from("proposals").update(COMPLETE_INTAKE).eq("id", proposal.id);
     mockGenerate.mockResolvedValueOnce(VALID_AI_RESULT);
-    const version = await generateInitialDraft(salesClient, proposal.id, "anthropic", salesUser);
+    const version = await generateInitialDraft(salesClient, proposal.id, "claude-sonnet-5", salesUser);
     await submitProposalForApproval(salesClient, proposal.id, version.id, salesUser);
     await decideProposalApproval(approverClient, {
       proposalId: proposal.id,
@@ -149,7 +148,7 @@ describe.skipIf(!hasCredentials)("final PDF generation (hosted Supabase integrat
     proposalIds.push(proposal.id);
     await admin.from("proposals").update(COMPLETE_INTAKE).eq("id", proposal.id);
     mockGenerate.mockResolvedValueOnce(VALID_AI_RESULT);
-    const version = await generateInitialDraft(salesClient, proposal.id, "anthropic", salesUser);
+    const version = await generateInitialDraft(salesClient, proposal.id, "claude-sonnet-5", salesUser);
 
     await expect(ensureFinalPdf(salesClient, proposal.id, version.id, salesUser)).rejects.toMatchObject({
       code: "INVALID_STATE",

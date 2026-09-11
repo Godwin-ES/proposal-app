@@ -1,4 +1,4 @@
-import type { GenerationProvider, ProposalIntake, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
+import type { ProposalIntake, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
 import type { GeneratedSections, SectionRegenerationResult } from "@/lib/ai/schemas";
 
 export type SupportingMaterialContext = { id: string; filename: string; text: string };
@@ -19,7 +19,7 @@ export type RegenerationRequest = {
 
 export type AIResult<T> = {
   data: T;
-  provider: GenerationProvider;
+  provider: "anthropic";
   model: string;
   latencyMs: number;
   inputTokens: number | null;

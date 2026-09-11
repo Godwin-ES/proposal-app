@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { CurrentUser } from "@/lib/auth/current-user";
-import type { ClarificationFlag, GenerationProvider, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
+import type { ClarificationFlag, ClaudeModel, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
 import { PROPOSAL_SECTION_KEYS } from "@/lib/domain/types";
 import { withFlagIds, openClarificationFlags } from "@/lib/domain/clarification";
 import { rowToIntake } from "@/lib/repositories/proposals";
@@ -10,7 +10,7 @@ import { getProposalForOwner } from "@/lib/proposals/service";
 import { getGenerationMaterials } from "@/lib/materials/service";
 import { insertGenerationRun, completeGenerationRun } from "@/lib/repositories/generations";
 import { createProposalVersion, type VersionRow } from "@/lib/repositories/versions";
-import { getProvider, defaultModelFor } from "@/lib/ai/provider";
+import { getProvider } from "@/lib/ai/provider";
 import { composeInitialSnapshot, composeRegeneratedSnapshot } from "@/lib/proposals/compose";
 import { hashProposalSnapshot } from "@/lib/domain/hashing";
 import { evaluateApprovalReadiness, evaluateGenerationReadiness } from "@/lib/domain/readiness";
@@ -25,7 +25,7 @@ import { DomainError } from "@/lib/domain/errors";
 export async function generateInitialDraft(
   supabase: SupabaseClient<Database>,
   proposalId: string,
-  provider: GenerationProvider,
+  model: ClaudeModel,
   user: CurrentUser
 ): Promise<VersionRow> {
   const proposal = await getProposalForOwner(supabase, proposalId, user);
@@ -56,11 +56,10 @@ export async function generateInitialDraft(
     throw new DomainError("READINESS_ERROR", "generation-readiness", materialsResult.reason, true);
   }
 
-  const model = defaultModelFor(provider);
   const run = await insertGenerationRun(supabase, {
     proposalId,
     baseVersionId: null,
-    provider,
+    provider: "anthropic",
     model,
     operation: "initial_generation",
     targetSection: null,
@@ -69,7 +68,7 @@ export async function generateInitialDraft(
 
   let aiResult;
   try {
-    aiResult = await getProvider(provider).generate({ model, intake, supportingMaterials: materialsResult.materials });
+    aiResult = await getProvider().generate({ model, intake, supportingMaterials: materialsResult.materials });
   } catch (error) {
     await completeGenerationRun(supabase, run.id, {
       status: "failed",
@@ -131,7 +130,7 @@ export async function regenerateSectionPreview(
   proposalId: string,
   targetSection: ProposalSectionKey,
   instruction: string,
-  provider: GenerationProvider,
+  model: ClaudeModel,
   currentSnapshot: ProposalSnapshot,
   user: CurrentUser
 ): Promise<{ snapshot: ProposalSnapshot; clarificationFlags: ClarificationFlag[]; generationRunId: string }> {
@@ -169,11 +168,10 @@ export async function regenerateSectionPreview(
     throw new DomainError("READINESS_ERROR", "section-regeneration", materialsResult.reason, true);
   }
 
-  const model = defaultModelFor(provider);
   const run = await insertGenerationRun(supabase, {
     proposalId,
     baseVersionId: proposal.current_version_id,
-    provider,
+    provider: "anthropic",
     model,
     operation: "section_regeneration",
     targetSection,
@@ -182,7 +180,7 @@ export async function regenerateSectionPreview(
 
   let aiResult;
   try {
-    aiResult = await getProvider(provider).regenerateSection({
+    aiResult = await getProvider().regenerateSection({
       model,
       targetSection,
       instruction,

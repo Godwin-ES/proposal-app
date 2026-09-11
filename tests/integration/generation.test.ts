@@ -11,7 +11,6 @@ const mockGenerate = vi.fn();
 const mockRegenerateSection = vi.fn();
 vi.mock("@/lib/ai/provider", () => ({
   getProvider: () => ({ generate: mockGenerate, regenerateSection: mockRegenerateSection }),
-  defaultModelFor: () => "mock-model",
 }));
 
 const { generateInitialDraft, regenerateSectionPreview } = await import("@/lib/ai/service");
@@ -86,7 +85,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
     mockGenerate.mockClear();
     const proposal = await freshProposal({ ...completeIntakeFields, project_scope: "" });
 
-    await expect(generateInitialDraft(supabase, proposal.id, "anthropic", user)).rejects.toMatchObject({
+    await expect(generateInitialDraft(supabase, proposal.id, "claude-sonnet-5", user)).rejects.toMatchObject({
       code: "READINESS_ERROR",
     });
     expect(mockGenerate).not.toHaveBeenCalled();
@@ -109,7 +108,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
       .update({ extraction_status: "failed", warning: "could not parse" })
       .eq("proposal_id", proposal.id);
 
-    await expect(generateInitialDraft(supabase, proposal.id, "anthropic", user)).rejects.toMatchObject({
+    await expect(generateInitialDraft(supabase, proposal.id, "claude-sonnet-5", user)).rejects.toMatchObject({
       code: "READINESS_ERROR",
     });
     expect(mockGenerate).not.toHaveBeenCalled();
@@ -120,7 +119,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
     mockGenerate.mockResolvedValueOnce(VALID_AI_RESULT);
     const proposal = await freshProposal(completeIntakeFields);
 
-    const version = await generateInitialDraft(supabase, proposal.id, "anthropic", user);
+    const version = await generateInitialDraft(supabase, proposal.id, "claude-sonnet-5", user);
 
     expect(version.version_number).toBe(1);
     expect(version.change_type).toBe("initial_generation");
@@ -149,7 +148,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
     mockGenerate.mockReset();
     mockGenerate.mockRejectedValueOnce(new Error("AI_OUTPUT_INVALID: invalid deliverables"));
 
-    await expect(generateInitialDraft(supabase, proposal.id, "anthropic", user)).rejects.toThrow();
+    await expect(generateInitialDraft(supabase, proposal.id, "claude-sonnet-5", user)).rejects.toThrow();
 
     const { data: updatedProposal } = await admin.from("proposals").select("current_version_id").eq("id", proposal.id).single();
     expect(updatedProposal?.current_version_id).toBeNull();
@@ -176,7 +175,7 @@ describe.skipIf(!hasCredentials)("initial generation (hosted Supabase integratio
       .update({ extraction_status: "ready", extracted_text: "a".repeat(70_000) })
       .eq("proposal_id", proposal.id);
 
-    await expect(generateInitialDraft(supabase, proposal.id, "anthropic", user)).rejects.toMatchObject({
+    await expect(generateInitialDraft(supabase, proposal.id, "claude-sonnet-5", user)).rejects.toMatchObject({
       code: "READINESS_ERROR",
     });
     expect(mockGenerate).not.toHaveBeenCalled();
@@ -237,7 +236,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       inputTokens: 1,
       outputTokens: 1,
     });
-    const version = await generateInitialDraft(supabase, proposal.id, "anthropic", user);
+    const version = await generateInitialDraft(supabase, proposal.id, "claude-sonnet-5", user);
     return { proposalId: proposal.id, version };
   }
 
@@ -259,7 +258,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       proposalId,
       "deliverables",
       "Add a second deliverable.",
-      "anthropic",
+      "claude-sonnet-5",
       version.snapshot,
       user
     );
@@ -285,7 +284,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     const { proposalId, version } = await generatedProposal();
 
     await expect(
-      regenerateSectionPreview(supabase, proposalId, "introduction", "   ", "anthropic", version.snapshot, user)
+      regenerateSectionPreview(supabase, proposalId, "introduction", "   ", "claude-sonnet-5", version.snapshot, user)
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect(mockRegenerateSection).not.toHaveBeenCalled();
   });
@@ -296,7 +295,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     mockRegenerateSection.mockRejectedValueOnce(new Error("AI_OUTPUT_INVALID: bad output"));
 
     await expect(
-      regenerateSectionPreview(supabase, proposalId, "introduction", "Make it punchier.", "anthropic", version.snapshot, user)
+      regenerateSectionPreview(supabase, proposalId, "introduction", "Make it punchier.", "claude-sonnet-5", version.snapshot, user)
     ).rejects.toThrow();
 
     const { data: current } = await admin.from("proposals").select("current_version_id").eq("id", proposalId).single();
@@ -312,7 +311,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
     const { proposalId, version } = await generatedProposal();
 
     await expect(
-      regenerateSectionPreview(supabase, proposalId, "pricing" as never, "Lower it.", "anthropic", version.snapshot, user)
+      regenerateSectionPreview(supabase, proposalId, "pricing" as never, "Lower it.", "claude-sonnet-5", version.snapshot, user)
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect(mockRegenerateSection).not.toHaveBeenCalled();
   });
@@ -334,7 +333,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       proposalId,
       "introduction",
       "Make it punchier.",
-      "anthropic",
+      "claude-sonnet-5",
       version.snapshot,
       user
     );
@@ -376,7 +375,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       proposalId,
       "introduction",
       "Punch it up.",
-      "anthropic",
+      "claude-sonnet-5",
       version.snapshot,
       user
     );
@@ -397,7 +396,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       proposalId,
       "deliverables",
       "Trim to one item.",
-      "anthropic",
+      "claude-sonnet-5",
       firstPreview.snapshot,
       user
     );
@@ -441,7 +440,7 @@ describe.skipIf(!hasCredentials)("targeted section regeneration (hosted Supabase
       proposalId,
       "introduction",
       "Make it punchier.",
-      "anthropic",
+      "claude-sonnet-5",
       version.snapshot,
       user
     );

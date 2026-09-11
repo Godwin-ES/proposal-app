@@ -54,7 +54,7 @@ Requires Node 20+ and pnpm.
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Public anon/publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Local dev/tests only | Not read by the app itself — only used by the integration test suite and one-off admin scripts. Never expose client-side. |
-| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | Yes | Official generation path |
+| `ANTHROPIC_API_KEY` | Yes | Claude generation — model itself is a per-request choice in the UI (Sonnet 5 or Haiku 4.5), not env-configured |
 | `RESEND_API_KEY` | Yes | Delivery email |
 | `EMAIL_FROM` | Yes | Supports `"Display Name <address>"` format |
 | `RESEND_SANDBOX_RECIPIENT` | Optional | Redirects every send to one inbox at the provider boundary only — the UI, delivery history, and readiness checks still show the real client email untouched. Useful on Resend's sandbox sender, which can only deliver to the account's own address anyway. |

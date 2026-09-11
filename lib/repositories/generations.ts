@@ -1,12 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import type { GenerationProvider, GenerationStatus, ProposalSectionKey } from "@/lib/domain/types";
+import type { GenerationStatus, ProposalSectionKey } from "@/lib/domain/types";
 import { DomainError } from "@/lib/domain/errors";
 
 type GenerationRunRowBase = Database["public"]["Tables"]["generation_runs"]["Row"];
 export type GenerationRunRow = Omit<GenerationRunRowBase, "provider" | "status" | "operation" | "target_section"> & {
-  provider: GenerationProvider;
+  // The DB column still allows historical 'google' rows from before Claude
+  // became the only provider (see supabase/migrations/001_week3_schema.sql)
+  // — never widen this back to accept it as a value the app can write again.
+  provider: "anthropic";
   status: GenerationStatus;
   operation: "initial_generation" | "section_regeneration";
   target_section: ProposalSectionKey | null;
@@ -17,7 +20,7 @@ export async function insertGenerationRun(
   input: {
     proposalId: string;
     baseVersionId: string | null;
-    provider: GenerationProvider;
+    provider: "anthropic";
     model: string;
     operation: "initial_generation" | "section_regeneration";
     targetSection: ProposalSectionKey | null;

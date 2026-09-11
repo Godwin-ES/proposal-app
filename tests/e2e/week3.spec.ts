@@ -7,10 +7,10 @@ import type { Database } from "../../lib/supabase/database.types";
 
 /**
  * Covers the major Week 3 user journey end to end against a real running app,
- * real hosted Supabase, and a real (cheap) Gemini call for generation — per
- * §19 this suite intentionally does not repeat this on every CI run with
- * Claude to avoid real model cost; the Claude path is verified once manually
- * per Build Notes and covered by mocked-provider integration tests.
+ * real hosted Supabase, and a real (cheap) Claude Haiku call for generation —
+ * per §19 this suite intentionally uses the cheaper model to avoid real
+ * model cost on every CI run; the Sonnet path is verified once manually per
+ * Build Notes and covered by mocked-provider integration tests.
  *
  * Requires the demo accounts from supabase/migrations to exist (see
  * ../../BUILD-NOTES-NEXTJS.md — created manually via the Supabase dashboard/API,
@@ -82,15 +82,15 @@ test("full proposal lifecycle: intake -> generation -> regeneration -> approval 
     await expect(salesPage.locator("text=Client email saved.")).toBeVisible({ timeout: 10_000 });
   });
 
-  await test.step("Salesperson generates the initial draft with Gemini", async () => {
-    await salesPage.getByLabel("AI Provider").click();
-    await salesPage.getByRole("option", { name: "Gemini" }).click();
+  await test.step("Salesperson generates the initial draft with Claude Haiku 4.5", async () => {
+    await salesPage.getByLabel("Claude Model").click();
+    await salesPage.getByRole("option", { name: "Claude Haiku 4.5" }).click();
     await salesPage.click('button:has-text("Generate Draft")');
     await salesPage.waitForSelector("text=Version History", { timeout: 30_000 });
     await expect(salesPage.locator("text=/Version \\d+/").first()).toContainText("Version 1");
   });
 
-  await test.step("Regenerating Deliverables changes only that section", async () => {
+  await test.step("Regenerating Deliverables lands in the draft; changes only that section once saved", async () => {
     const introductionBefore = await salesPage
       .locator('[data-slot="card"]', { hasText: "Introduction" })
       .first()
@@ -98,8 +98,12 @@ test("full proposal lifecycle: intake -> generation -> regeneration -> approval 
 
     await salesPage.getByRole("button", { name: "Regenerate Deliverables" }).click();
     await salesPage.fill("#regen-instruction", "Add a deliverable for a quarterly reconciliation summary report.");
-    await salesPage.click('button:has-text("Regenerate")');
-    await salesPage.waitForSelector("text=Version 2", { timeout: 30_000 });
+    await salesPage.getByRole("button", { name: "Regenerate", exact: true }).click();
+    // Regeneration lands in the local draft — it does not create a version
+    // by itself (see ProposalWorkspace's Save Version flow).
+    await salesPage.waitForSelector("text=Save Version", { timeout: 30_000 });
+    await salesPage.click('button:has-text("Save Version")');
+    await salesPage.waitForSelector("text=Version 2", { timeout: 15_000 });
 
     const introductionAfter = await salesPage
       .locator('[data-slot="card"]', { hasText: "Introduction" })

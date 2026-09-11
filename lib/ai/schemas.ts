@@ -10,12 +10,11 @@ export const materialUsageSchema = z.object({
 
 /**
  * "general" stands in for "not tied to one section" (e.g. an uploaded file
- * that seems unrelated to this proposal entirely). A real `null` would work
- * for our own domain type, but Gemini's schema format has real trouble with
- * nullable/union JSON Schema shapes (the same class of incompatibility that
- * broke `const` on regeneration schemas) — a plain enum sidesteps that
- * entirely. `lib/domain/clarification.ts` maps "general" -> `null` when
- * building our internal ClarificationFlag.
+ * that seems unrelated to this proposal entirely) — a plain enum value
+ * rather than a real `null`/union JSON Schema shape, kept simple rather than
+ * reworked now that it no longer needs to satisfy anything beyond
+ * Anthropic's tool schema. `lib/domain/clarification.ts` maps "general" ->
+ * `null` when building our internal ClarificationFlag.
  */
 export const clarificationFlagSchema = z.object({
   section: z.enum(["introduction", "projectScope", "recommendedApproach", "deliverables", "general"]),

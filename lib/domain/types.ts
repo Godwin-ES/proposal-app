@@ -24,7 +24,16 @@ export type ProposalChangeType =
   | "manual_edit"
   | "section_regeneration";
 
-export type GenerationProvider = "anthropic" | "google";
+/** Claude is the only generation provider — the AI-facing "provider" this
+ * app records is always "anthropic"; what the user actually picks is which
+ * Claude model to use. */
+export const CLAUDE_MODELS = ["claude-sonnet-5", "claude-haiku-4-5-20251001"] as const;
+export type ClaudeModel = (typeof CLAUDE_MODELS)[number];
+export const DEFAULT_CLAUDE_MODEL: ClaudeModel = "claude-sonnet-5";
+export const CLAUDE_MODEL_LABELS: Record<ClaudeModel, string> = {
+  "claude-sonnet-5": "Claude Sonnet 5",
+  "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
+};
 
 export type GenerationStatus = "running" | "succeeded" | "failed" | "stale";
 

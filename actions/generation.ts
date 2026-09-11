@@ -8,7 +8,7 @@ import { DomainError } from "@/lib/domain/errors";
 import type {
   ActionResult,
   ClarificationFlag,
-  GenerationProvider,
+  ClaudeModel,
   ProposalSectionKey,
   ProposalSnapshot,
 } from "@/lib/domain/types";
@@ -25,12 +25,12 @@ function toActionError(error: unknown, stage: string) {
 
 export async function generateInitialDraftAction(
   proposalId: string,
-  provider: GenerationProvider
+  model: ClaudeModel
 ): Promise<ActionResult<{ versionId: string }>> {
   try {
     const user = await requireSalesperson();
     const supabase = await createSupabaseServerClient();
-    const version = await generateInitialDraft(supabase, proposalId, provider, user);
+    const version = await generateInitialDraft(supabase, proposalId, model, user);
     revalidatePath(`/proposals/${proposalId}`);
     revalidatePath("/dashboard");
     return { ok: true, data: { versionId: version.id } };
@@ -43,7 +43,7 @@ export async function regenerateSectionPreviewAction(
   proposalId: string,
   targetSection: ProposalSectionKey,
   instruction: string,
-  provider: GenerationProvider,
+  model: ClaudeModel,
   currentSnapshot: ProposalSnapshot
 ): Promise<
   ActionResult<{ snapshot: ProposalSnapshot; clarificationFlags: ClarificationFlag[]; generationRunId: string }>
@@ -56,7 +56,7 @@ export async function regenerateSectionPreviewAction(
       proposalId,
       targetSection,
       instruction,
-      provider,
+      model,
       currentSnapshot,
       user
     );

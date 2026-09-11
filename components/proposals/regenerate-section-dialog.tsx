@@ -16,7 +16,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { ClarificationFlag, GenerationProvider, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
+import type { ClarificationFlag, ProposalSectionKey, ProposalSnapshot } from "@/lib/domain/types";
+import { CLAUDE_MODELS, CLAUDE_MODEL_LABELS, DEFAULT_CLAUDE_MODEL, type ClaudeModel } from "@/lib/domain/types";
 
 export function RegenerateSectionDialog({
   proposalId,
@@ -44,12 +45,12 @@ export function RegenerateSectionDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
-  const [provider, setProvider] = useState<GenerationProvider>("anthropic");
+  const [model, setModel] = useState<ClaudeModel>(DEFAULT_CLAUDE_MODEL);
   const [pending, setPending] = useState(false);
 
   async function handleRegenerate() {
     setPending(true);
-    const result = await regenerateSectionPreviewAction(proposalId, targetSection, instruction, provider, currentSnapshot);
+    const result = await regenerateSectionPreviewAction(proposalId, targetSection, instruction, model, currentSnapshot);
     setPending(false);
     if (result.ok) {
       onRegenerated(result.data);
@@ -79,16 +80,19 @@ export function RegenerateSectionDialog({
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium" htmlFor="regen-provider">
-              AI Provider
+            <label className="text-sm font-medium" htmlFor="regen-model">
+              Claude Model
             </label>
-            <Select value={provider} onValueChange={(v) => setProvider(v as GenerationProvider)}>
-              <SelectTrigger id="regen-provider" className="w-48">
+            <Select value={model} onValueChange={(v) => setModel(v as ClaudeModel)}>
+              <SelectTrigger id="regen-model" className="w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="anthropic">Claude Sonnet 5</SelectItem>
-                <SelectItem value="google">Gemini</SelectItem>
+                {CLAUDE_MODELS.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {CLAUDE_MODEL_LABELS[m]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
