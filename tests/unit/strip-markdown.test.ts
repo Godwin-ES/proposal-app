@@ -11,10 +11,15 @@ describe("stripMarkdownFormatting", () => {
     );
   });
 
-  it("strips numbered and bulleted list markers at the start of a line", () => {
-    expect(stripMarkdownFormatting("1. First point\n2. Second point")).toBe("First point\nSecond point");
-    expect(stripMarkdownFormatting("- First point\n- Second point")).toBe("First point\nSecond point");
-    expect(stripMarkdownFormatting("* First point")).toBe("First point");
+  it("leaves a leading hyphen bullet alone — it's the one allowed list style", () => {
+    const input = "- First point\n- Second point";
+    expect(stripMarkdownFormatting(input)).toBe(input);
+  });
+
+  it("normalizes numbered and asterisk/bullet-dot markers to a hyphen instead of dropping them", () => {
+    expect(stripMarkdownFormatting("1. First point\n2. Second point")).toBe("- First point\n- Second point");
+    expect(stripMarkdownFormatting("* First point")).toBe("- First point");
+    expect(stripMarkdownFormatting("• First point")).toBe("- First point");
   });
 
   it("strips markdown headings", () => {
@@ -26,10 +31,26 @@ describe("stripMarkdownFormatting", () => {
     expect(stripMarkdownFormatting(plain)).toBe(plain);
   });
 
-  it("handles a realistic deliverable line with a bolded lead-in", () => {
+  it("unwraps a bolded lead-in on a hyphen bullet while keeping the bullet", () => {
     const input = "- **Instructor lesson scheduling**: A scheduling interface enabling instructors to post available times.";
     expect(stripMarkdownFormatting(input)).toBe(
-      "Instructor lesson scheduling: A scheduling interface enabling instructors to post available times."
+      "- Instructor lesson scheduling: A scheduling interface enabling instructors to post available times."
     );
+  });
+
+  it("keeps a realistic bulleted paragraph intact end to end", () => {
+    const input = `The scope includes:
+
+- **Instructor lesson scheduling**: A scheduling interface enabling instructors to post available times.
+- **Parent self-service rescheduling**: A parent-facing portal allowing families to request reschedules.
+
+The system will integrate lesson data automatically.`;
+
+    expect(stripMarkdownFormatting(input)).toBe(`The scope includes:
+
+- Instructor lesson scheduling: A scheduling interface enabling instructors to post available times.
+- Parent self-service rescheduling: A parent-facing portal allowing families to request reschedules.
+
+The system will integrate lesson data automatically.`);
   });
 });
