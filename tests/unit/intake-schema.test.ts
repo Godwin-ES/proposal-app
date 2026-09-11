@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { proposalIntakeSchema, proposalBodySchema } from "@/lib/domain/schemas";
+import { proposalIntakeSchema, proposalBodySchema, proposalSnapshotSchema } from "@/lib/domain/schemas";
 
 describe("proposalIntakeSchema", () => {
   const base = {
@@ -39,6 +39,18 @@ describe("proposalIntakeSchema", () => {
     const result = proposalIntakeSchema.safeParse({ ...base, dateOfCall: "" });
     expect(result.success).toBe(true);
   });
+
+  it("rejects a date of call in the future", () => {
+    const farFuture = `${new Date().getFullYear() + 5}-01-01`;
+    const result = proposalIntakeSchema.safeParse({ ...base, dateOfCall: farFuture });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts today as a date of call", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const result = proposalIntakeSchema.safeParse({ ...base, dateOfCall: today });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("proposalBodySchema", () => {
@@ -62,5 +74,33 @@ describe("proposalBodySchema", () => {
 
   it("rejects an empty introduction", () => {
     expect(proposalBodySchema.safeParse({ ...base, introduction: "" }).success).toBe(false);
+  });
+});
+
+describe("proposalSnapshotSchema", () => {
+  const baseSnapshot = {
+    client: { clientName: "Jane Doe", companyName: "Acme Co", dateOfCall: "2026-01-15", salespersonName: "Sam Rep" },
+    content: {
+      introduction: "intro",
+      projectScope: "scope",
+      recommendedApproach: "approach",
+      deliverables: ["one"],
+      timeline: "6 weeks",
+      pricing: "$12,000",
+      nextSteps: "next",
+    },
+  };
+
+  it("accepts a valid snapshot", () => {
+    expect(proposalSnapshotSchema.safeParse(baseSnapshot).success).toBe(true);
+  });
+
+  it("rejects a snapshot with a future date of call", () => {
+    const farFuture = `${new Date().getFullYear() + 5}-01-01`;
+    const result = proposalSnapshotSchema.safeParse({
+      ...baseSnapshot,
+      client: { ...baseSnapshot.client, dateOfCall: farFuture },
+    });
+    expect(result.success).toBe(false);
   });
 });

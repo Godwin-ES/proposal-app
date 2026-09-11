@@ -28,3 +28,17 @@ export function formatDateOfCall(isoDate: string): string {
   if (!monthName) return isoDate;
   return `${day}-${monthName}-${year}`;
 }
+
+/**
+ * Today's date, in the caller's local timezone, as plain ISO ("2026-02-03")
+ * — for a date input's `max` attribute (a discovery call can't have
+ * happened in the future). `Date.toISOString()` alone would give UTC's
+ * date, which is wrong right around midnight in any timezone ahead of UTC;
+ * this shifts by the local offset first so it matches what the browser's
+ * own clock says "today" is.
+ */
+export function todayIsoDate(): string {
+  const now = new Date();
+  const localMidnightUtc = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localMidnightUtc.toISOString().slice(0, 10);
+}

@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimelineInput } from "@/components/shared/timeline-input";
 import { PricingInput } from "@/components/shared/pricing-input";
 import { formatTimeline, formatPricing } from "@/lib/domain/quantity-fields";
+import { todayIsoDate } from "@/lib/domain/date-format";
 
 type FieldConfig = {
   name: keyof ProposalIntake;
@@ -49,6 +50,8 @@ const CLIENT_INFO_FIELDS: FieldConfig[] = [
 const RELAXABLE_FIELDS = new Set<keyof ProposalIntake>([
   "clientName",
   "companyName",
+  "salespersonName",
+  "dateOfCall",
   "clientNeedsSummary",
   "projectScope",
   "goalsAndObjectives",
@@ -169,7 +172,13 @@ export function IntakeForm({
         ) : field.multiline ? (
           <Textarea id={field.name} disabled={!editable || pending} rows={4} {...register(field.name)} />
         ) : (
-          <Input id={field.name} type={field.inputType} disabled={!editable || pending} {...register(field.name)} />
+          <Input
+            id={field.name}
+            type={field.inputType}
+            max={field.inputType === "date" ? todayIsoDate() : undefined}
+            disabled={!editable || pending}
+            {...register(field.name)}
+          />
         )}
         {errors[field.name] ? <p className="text-sm text-destructive">{errors[field.name]?.message as string}</p> : null}
       </div>
@@ -207,16 +216,12 @@ export function IntakeForm({
                   <Checkbox checked={value} onCheckedChange={onChange} disabled={!editable || pending} />
                 )}
               />
-              <span>
-                A supporting document already contains the client/company name, needs, goals, and services below —
-                leave those fields blank and generate from the document instead.
-              </span>
+              <span>A supporting document already has these fields</span>
             </Label>
             <p className="text-xs text-muted-foreground">
-              Blank fields left this way — and Timeline/Pricing if left at their default — are filled from supporting
-              material where possible when you generate; the AI flags anything it can&apos;t confidently fill in,
-              rather than guessing, and never overwrites a value you actually entered yourself. Salesperson Name and
-              Date of Call are always unaffected by this option.
+              Blank fields — and Timeline/Pricing left at their default — are filled from supporting material where
+              possible when you generate; the AI flags anything it can&apos;t confidently fill in, rather than
+              guessing, and never overwrites a value you actually entered yourself.
             </p>
           </CardContent>
         </Card>

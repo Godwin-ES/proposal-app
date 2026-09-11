@@ -4,6 +4,7 @@ import { buildNextSteps } from "@/lib/templates/proposal";
 import { placeholderContent, SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
 import { formatTimeline, formatPricing } from "@/lib/domain/quantity-fields";
 import { stripMarkdownFormatting } from "@/lib/domain/strip-markdown";
+import { isoDatePattern, isNotFutureIsoDate } from "@/lib/domain/schemas";
 
 const DEFAULT_TIMELINE = formatTimeline(1, "weeks");
 const DEFAULT_PRICING = formatPricing(1, "USD");
@@ -36,6 +37,29 @@ function resolveIdentityField(
   return {
     value: placeholderContent(label),
     flag: { section: "general", message: `${label} could not be determined from the intake fields or supporting material.` },
+  };
+}
+
+/** Same rule as resolveIdentityField, but a document-supplied value must
+ * also be a real, non-future ISO date to be usable — a hallucinated or
+ * future date from material is worth no more than nothing, so it falls
+ * through to the same placeholder/flag outcome rather than shipping a
+ * value that would later fail the "no future date" snapshot check outright. */
+function resolveDateOfCall(
+  intakeValue: string,
+  fromMaterial: string | null,
+  documentProvidesFields: boolean
+): { value: string; flag: AIClarificationFlag | null } {
+  const trimmed = intakeValue.trim();
+  if (trimmed) return { value: trimmed, flag: null };
+
+  const usable =
+    documentProvidesFields && fromMaterial !== null && isoDatePattern.test(fromMaterial) && isNotFutureIsoDate(fromMaterial);
+  if (usable) return { value: fromMaterial as string, flag: null };
+
+  return {
+    value: placeholderContent("Date of Call"),
+    flag: { section: "general", message: "Date of Call could not be determined from the intake fields or supporting material." },
   };
 }
 
@@ -92,6 +116,17 @@ export function composeInitialSnapshot(
   );
   if (companyName.flag) additionalFlags.push(companyName.flag);
 
+  const salespersonName = resolveIdentityField(
+    "Salesperson Name",
+    intake.salespersonName,
+    generated.fieldsFromMaterial.salespersonName,
+    documentProvidesFields
+  );
+  if (salespersonName.flag) additionalFlags.push(salespersonName.flag);
+
+  const dateOfCall = resolveDateOfCall(intake.dateOfCall, generated.fieldsFromMaterial.dateOfCall, documentProvidesFields);
+  if (dateOfCall.flag) additionalFlags.push(dateOfCall.flag);
+
   const timeline = resolveCommercialField(
     intake.proposedTimeline,
     DEFAULT_TIMELINE,
@@ -136,8 +171,8 @@ export function composeInitialSnapshot(
       client: {
         clientName: clientName.value,
         companyName: companyName.value,
-        dateOfCall: intake.dateOfCall,
-        salespersonName: intake.salespersonName,
+        dateOfCall: dateOfCall.value,
+        salespersonName: salespersonName.value,
       },
       content: {
         introduction: stripMarkdownFormatting(generated.introduction),

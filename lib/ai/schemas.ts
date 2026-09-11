@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TIMELINE_UNITS, CURRENCY_CODES } from "@/lib/domain/quantity-fields";
+import { isoDatePattern } from "@/lib/domain/schemas";
 
 /**
  * Fill-only-if-blank values the model may offer for structural fields it
@@ -16,6 +17,8 @@ import { TIMELINE_UNITS, CURRENCY_CODES } from "@/lib/domain/quantity-fields";
 export const fieldsFromMaterialSchema = z.object({
   clientName: z.string().trim().min(1).nullable(),
   companyName: z.string().trim().min(1).nullable(),
+  salespersonName: z.string().trim().min(1).nullable(),
+  dateOfCall: z.string().regex(isoDatePattern).nullable(),
   timeline: z
     .object({
       amount: z.number().int().positive(),

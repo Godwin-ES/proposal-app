@@ -7,7 +7,7 @@ describe("generatedSectionsSchema", () => {
     projectScope: "scope",
     recommendedApproach: "approach",
     deliverables: ["one"],
-    fieldsFromMaterial: { clientName: null, companyName: null, timeline: null, pricing: null },
+    fieldsFromMaterial: { clientName: null, companyName: null, salespersonName: null, dateOfCall: null, timeline: null, pricing: null },
   };
 
   it("accepts a valid provider payload and defaults optional arrays", () => {
@@ -31,6 +31,8 @@ describe("generatedSectionsSchema", () => {
       fieldsFromMaterial: {
         clientName: "Jane Doe",
         companyName: "Acme Co",
+        salespersonName: "Sam Rep",
+        dateOfCall: "2026-01-15",
         timeline: { amount: 6, unit: "weeks" },
         pricing: { amount: 12000, currency: "USD" },
       },

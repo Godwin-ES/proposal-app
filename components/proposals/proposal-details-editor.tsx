@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil } from "lucide-react";
 import type { ProposalSnapshot } from "@/lib/domain/types";
+import { todayIsoDate } from "@/lib/domain/date-format";
 
 export function ProposalDetailsEditor({
   client,
@@ -92,6 +93,7 @@ export function ProposalDetailsEditor({
             <Input
               id="edit-dateOfCall"
               type="date"
+              max={todayIsoDate()}
               value={values.dateOfCall}
               onChange={(e) => setValues((v) => ({ ...v, dateOfCall: e.target.value }))}
               disabled={saving}

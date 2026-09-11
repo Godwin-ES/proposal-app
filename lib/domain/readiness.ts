@@ -7,16 +7,14 @@ function isBlank(value: string | undefined | null): boolean {
 /**
  * `documentProvidesFields` is the salesperson's pre-generation declaration
  * that supporting material already contains the answers to some of these
- * fields (see `document_provides_fields` on `proposals`). When set, the
- * narrative/identity fields below may stay blank — generation is expected to
- * draw them from supporting material instead (see composeInitialSnapshot) —
- * but at least one successfully-extracted material must actually exist, or
- * there is nothing for that promise to draw from. Salesperson Name, Date of
- * Call, Proposed Timeline, and Estimated Pricing are never relaxed: the
- * first two are internal process metadata no client document would state,
- * and the latter two the AI is never allowed to invent — a document may only
- * ever fill them in when they're still at their untouched default (see
- * composeInitialSnapshot), which this readiness check can't observe.
+ * fields (see `document_provides_fields` on `proposals`). When set, every
+ * field below may stay blank — generation is expected to draw it from
+ * supporting material instead (see composeInitialSnapshot) — but at least
+ * one successfully-extracted material must actually exist, or there is
+ * nothing for that promise to draw from. Proposed Timeline and Estimated
+ * Pricing are never blank in practice (their inputs always display a
+ * concrete default) — a document may only override that untouched default,
+ * which this readiness check can't observe and doesn't need to.
  */
 export function evaluateGenerationReadiness(
   intake: ProposalIntake,
@@ -32,6 +30,8 @@ export function evaluateGenerationReadiness(
   if (!documentProvidesFields) {
     if (isBlank(intake.clientName)) blockers.push("Client Name");
     if (isBlank(intake.companyName)) blockers.push("Company Name");
+    if (isBlank(intake.salespersonName)) blockers.push("Salesperson Name");
+    if (isBlank(intake.dateOfCall)) blockers.push("Date of Call");
     if (isBlank(intake.clientNeedsSummary)) blockers.push("Summary of Client's Needs");
     if (isBlank(intake.projectScope)) blockers.push("Project Scope");
     if (isBlank(intake.goalsAndObjectives)) blockers.push("Goals and Objectives");
@@ -41,8 +41,6 @@ export function evaluateGenerationReadiness(
   // Client Email is delivery routing metadata, not something generation
   // needs — it's enforced by evaluateDeliveryReadiness instead, right
   // before it actually matters.
-  if (isBlank(intake.salespersonName)) blockers.push("Salesperson Name");
-  if (isBlank(intake.dateOfCall)) blockers.push("Date of Call");
   if (isBlank(intake.proposedTimeline)) blockers.push("Proposed Timeline");
   if (isBlank(intake.estimatedPricing)) blockers.push("Estimated Pricing");
   return blockers;

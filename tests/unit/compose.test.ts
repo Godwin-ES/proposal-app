@@ -19,7 +19,7 @@ const intake: ProposalIntake = {
   estimatedPricing: "$12,000",
 };
 
-const noFieldsFromMaterial = { clientName: null, companyName: null, timeline: null, pricing: null };
+const noFieldsFromMaterial = { clientName: null, companyName: null, salespersonName: null, dateOfCall: null, timeline: null, pricing: null };
 
 const generated: GeneratedSections = {
   introduction: "AI intro",
@@ -118,6 +118,31 @@ describe("composeInitialSnapshot", () => {
     };
     const { snapshot } = composeInitialSnapshot(intake, withMaterial, true);
     expect(snapshot.content.timeline).toBe("6 weeks");
+  });
+
+  it("fills salesperson name and date of call from material only when blank and the checkbox is on, and rejects a future date", () => {
+    const blankIntake = { ...intake, salespersonName: "", dateOfCall: "" };
+    const withMaterial = {
+      ...generated,
+      fieldsFromMaterial: { ...noFieldsFromMaterial, salespersonName: "Alex Sales", dateOfCall: "2026-01-20" },
+    };
+
+    const { snapshot: withoutCheckbox } = composeInitialSnapshot(blankIntake, withMaterial, false);
+    expect(withoutCheckbox.client.salespersonName).toBe(placeholderContent("Salesperson Name"));
+    expect(withoutCheckbox.client.dateOfCall).toBe(placeholderContent("Date of Call"));
+
+    const { snapshot: withCheckbox } = composeInitialSnapshot(blankIntake, withMaterial, true);
+    expect(withCheckbox.client.salespersonName).toBe("Alex Sales");
+    expect(withCheckbox.client.dateOfCall).toBe("2026-01-20");
+
+    const farFuture = `${new Date().getFullYear() + 5}-01-01`;
+    const withFutureDate = {
+      ...generated,
+      fieldsFromMaterial: { ...noFieldsFromMaterial, dateOfCall: farFuture },
+    };
+    const { snapshot: rejectsFuture, additionalFlags } = composeInitialSnapshot(blankIntake, withFutureDate, true);
+    expect(rejectsFuture.client.dateOfCall).toBe(placeholderContent("Date of Call"));
+    expect(additionalFlags.some((f) => f.message.includes("Date of Call"))).toBe(true);
   });
 
   it("adds a safety-net flag when the model wrote a section placeholder without flagging it", () => {
