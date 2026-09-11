@@ -43,7 +43,7 @@ export function TimelineInput({
       <div className="flex items-center gap-2">
         <NumberStepper
           value={amount}
-          min={1}
+          min={0}
           disabled={disabled || isSameDay}
           onChange={(next) => update(next, unit)}
           className="w-28"

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatPricing, formatTimeline, parsePricing, parseTimeline } from "@/lib/domain/quantity-fields";
+import {
+  formatPricing,
+  formatTimeline,
+  parsePricing,
+  parseTimeline,
+  isTimelineUnset,
+  isPricingUnset,
+  TIMELINE_SAME_DAY,
+  PRICING_NO_COST,
+} from "@/lib/domain/quantity-fields";
 
 describe("formatTimeline / parseTimeline", () => {
   it("formats plural units", () => {
@@ -22,15 +31,32 @@ describe("formatTimeline / parseTimeline", () => {
     expect(parseTimeline("2 days")).toEqual({ amount: 2, unit: "days" });
   });
 
-  it("falls back to a sane non-zero default for unparseable input", () => {
-    expect(parseTimeline("")).toEqual({ amount: 1, unit: "weeks" });
-    expect(parseTimeline("sometime soon")).toEqual({ amount: 1, unit: "weeks" });
+  it("falls back to the unset (0) sentinel for unparseable input", () => {
+    expect(parseTimeline("")).toEqual({ amount: 0, unit: "weeks" });
+    expect(parseTimeline("sometime soon")).toEqual({ amount: 0, unit: "weeks" });
   });
 
   it("round-trips format -> parse -> format", () => {
     const formatted = formatTimeline(8, "weeks");
     const parsed = parseTimeline(formatted);
     expect(formatTimeline(parsed.amount, parsed.unit)).toBe(formatted);
+  });
+});
+
+describe("isTimelineUnset", () => {
+  it("treats a 0-amount value as unset", () => {
+    expect(isTimelineUnset(formatTimeline(0, "weeks"))).toBe(true);
+    expect(isTimelineUnset("")).toBe(true);
+    expect(isTimelineUnset("not a timeline")).toBe(true);
+  });
+
+  it("treats any non-zero amount as set", () => {
+    expect(isTimelineUnset(formatTimeline(1, "weeks"))).toBe(false);
+    expect(isTimelineUnset(formatTimeline(8, "weeks"))).toBe(false);
+  });
+
+  it("treats the deliberate Same day choice as set, not unset", () => {
+    expect(isTimelineUnset(TIMELINE_SAME_DAY)).toBe(false);
   });
 });
 
@@ -58,5 +84,22 @@ describe("formatPricing / parsePricing", () => {
     const formatted = formatPricing(23000, "CAD");
     const parsed = parsePricing(formatted);
     expect(formatPricing(parsed.amount, parsed.currency)).toBe(formatted);
+  });
+});
+
+describe("isPricingUnset", () => {
+  it("treats a 0-amount value as unset", () => {
+    expect(isPricingUnset(formatPricing(0, "USD"))).toBe(true);
+    expect(isPricingUnset("")).toBe(true);
+    expect(isPricingUnset("call for pricing")).toBe(true);
+  });
+
+  it("treats any non-zero amount as set", () => {
+    expect(isPricingUnset(formatPricing(1, "USD"))).toBe(false);
+    expect(isPricingUnset(formatPricing(18500, "USD"))).toBe(false);
+  });
+
+  it("treats the deliberate No cost choice as set, not unset", () => {
+    expect(isPricingUnset(PRICING_NO_COST)).toBe(false);
   });
 });

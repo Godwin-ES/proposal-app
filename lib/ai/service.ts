@@ -6,7 +6,7 @@ import type { ClarificationFlag, ClaudeModel, ProposalSectionKey, ProposalSnapsh
 import { PROPOSAL_SECTION_KEYS } from "@/lib/domain/types";
 import { withFlagIds, openClarificationFlags } from "@/lib/domain/clarification";
 import { rowToIntake } from "@/lib/repositories/proposals";
-import { getProposalForOwner } from "@/lib/proposals/service";
+import { getProposalForOwner, updateClientEmail } from "@/lib/proposals/service";
 import { getGenerationMaterials } from "@/lib/materials/service";
 import { insertGenerationRun, completeGenerationRun } from "@/lib/repositories/generations";
 import { createProposalVersion, type VersionRow } from "@/lib/repositories/versions";
@@ -87,7 +87,11 @@ export async function generateInitialDraft(
     throw error;
   }
 
-  const { snapshot, additionalFlags } = composeInitialSnapshot(intake, aiResult.data, documentProvidesFields);
+  const { snapshot, additionalFlags, clientEmailFromMaterial } = composeInitialSnapshot(
+    intake,
+    aiResult.data,
+    documentProvidesFields
+  );
   const contentHash = hashProposalSnapshot(snapshot);
   const approvalBlockers = evaluateApprovalReadiness({ snapshot, hasCurrentVersion: true });
   const clarificationFlags = withFlagIds([...aiResult.data.clarificationFlags, ...additionalFlags]);
@@ -122,6 +126,19 @@ export async function generateInitialDraft(
     outputTokens: aiResult.outputTokens,
     materialUsage: aiResult.data.supportingMaterialUsage,
   });
+
+  // Client Email isn't part of the snapshot (it's delivery routing metadata,
+  // not versioned content), so a material-derived value can't ride along
+  // with createProposalVersion above — it's persisted here instead, once the
+  // version itself is safely committed. Best-effort: the draft having
+  // generated successfully must not be undone by this failing.
+  if (clientEmailFromMaterial) {
+    try {
+      await updateClientEmail(supabase, proposalId, clientEmailFromMaterial);
+    } catch {
+      // Non-fatal — the salesperson can still fill Client Email in manually.
+    }
+  }
 
   return version;
 }

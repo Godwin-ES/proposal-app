@@ -56,6 +56,9 @@ const RELAXABLE_FIELDS = new Set<keyof ProposalIntake>([
   "projectScope",
   "goalsAndObjectives",
   "recommendedServices",
+  "clientEmail",
+  "proposedTimeline",
+  "estimatedPricing",
 ]);
 
 const SECTIONS: { title: string; fields: FieldConfig[] }[] = [
@@ -106,15 +109,17 @@ export function IntakeForm({
     formState: { errors, isDirty },
   } = useForm<IntakeFormValues>({
     resolver: zodResolver(intakeFormSchema),
-    // TimelineInput/PricingInput always *display* a real default (1 week /
-    // $0) even when the underlying field is blank, so the form's actual
+    // TimelineInput/PricingInput always *display* a real default (0 weeks /
+    // USD 0) even when the underlying field is blank, so the form's actual
     // default must match that display from the first render — otherwise the
     // displayed value and the saved value silently disagree until the user
-    // happens to touch the stepper.
+    // happens to touch the stepper. 0 is deliberately not a valid final
+    // value — it means "not yet specified," the same as Client Name being
+    // blank, and is enforced by evaluateGenerationReadiness the same way.
     defaultValues: {
       ...defaultValues,
-      proposedTimeline: defaultValues.proposedTimeline || formatTimeline(1, "weeks"),
-      estimatedPricing: defaultValues.estimatedPricing || formatPricing(1, "USD"),
+      proposedTimeline: defaultValues.proposedTimeline || formatTimeline(0, "weeks"),
+      estimatedPricing: defaultValues.estimatedPricing || formatPricing(0, "USD"),
       documentProvidesFields,
     },
   });

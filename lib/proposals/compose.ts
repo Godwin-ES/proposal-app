@@ -2,12 +2,9 @@ import type { ProposalIntake, ProposalSectionKey, ProposalSnapshot } from "@/lib
 import type { AIClarificationFlag, GeneratedSections } from "@/lib/ai/schemas";
 import { buildNextSteps } from "@/lib/templates/proposal";
 import { placeholderContent, SECTION_DISPLAY_LABELS } from "@/lib/domain/section-labels";
-import { formatTimeline, formatPricing } from "@/lib/domain/quantity-fields";
+import { formatTimeline, formatPricing, isTimelineUnset, isPricingUnset } from "@/lib/domain/quantity-fields";
 import { stripMarkdownFormatting } from "@/lib/domain/strip-markdown";
-import { isoDatePattern, isNotFutureIsoDate } from "@/lib/domain/schemas";
-
-const DEFAULT_TIMELINE = formatTimeline(1, "weeks");
-const DEFAULT_PRICING = formatPricing(1, "USD");
+import { isoDatePattern, isNotFutureIsoDate, clientEmailSchema } from "@/lib/domain/schemas";
 
 const NARRATIVE_SECTIONS: { key: ProposalSectionKey; label: string }[] = [
   { key: "introduction", label: SECTION_DISPLAY_LABELS.introduction },
@@ -63,25 +60,48 @@ function resolveDateOfCall(
   };
 }
 
-/** Same fill-only-if-blank rule as identity fields, but Timeline/Pricing are
- * never truly "blank" in this app — TimelineInput/PricingInput always
- * display a concrete default (1 week / a minimal price) even when the
- * salesperson never touched them. Treat that exact untouched default as
- * "not really specified" ONLY when `documentProvidesFields` is on, so a
- * document may supply a real value; anything else the salesperson typed is
- * always authoritative and is never a "failure" state, so there's no
- * placeholder/flag case here — worst case, the untouched default stands. */
+/** Same three-way rule as resolveIdentityField, but "unset" for Timeline/
+ * Pricing means a 0 amount (isTimelineUnset/isPricingUnset), not an empty
+ * string — the stepper always displays a real number, and 0 is the value
+ * that means "not yet specified," same idea as Client Name being blank. */
 function resolveCommercialField<T extends { amount: number }>(
+  label: string,
   intakeValue: string,
-  defaultValue: string,
+  isUnset: (value: string) => boolean,
   fromMaterial: T | null,
   documentProvidesFields: boolean,
   format: (value: T) => string
-): string {
-  if (documentProvidesFields && intakeValue.trim() === defaultValue && fromMaterial) {
-    return format(fromMaterial);
+): { value: string; flag: AIClarificationFlag | null } {
+  if (!isUnset(intakeValue)) return { value: intakeValue, flag: null };
+
+  if (documentProvidesFields && fromMaterial) {
+    return { value: format(fromMaterial), flag: null };
   }
-  return intakeValue;
+
+  return {
+    value: placeholderContent(label),
+    flag: { section: "general", message: `${label} could not be determined from the intake fields or supporting material.` },
+  };
+}
+
+/** Client Email is delivery routing metadata, not part of the snapshot at
+ * all (see ProposalSnapshot) — so unlike the other identity fields, this
+ * only ever returns a value to persist separately (or null, meaning "leave
+ * it alone"); there's no placeholder concept for a field that isn't shown
+ * to the client and doesn't block generation either way. */
+function resolveClientEmail(
+  intakeValue: string,
+  fromMaterial: string | null,
+  documentProvidesFields: boolean
+): { value: string | null; flag: AIClarificationFlag | null } {
+  if (intakeValue.trim()) return { value: null, flag: null };
+  if (!documentProvidesFields || !fromMaterial) return { value: null, flag: null };
+  if (!clientEmailSchema.safeParse(fromMaterial).success) return { value: null, flag: null };
+
+  return {
+    value: fromMaterial,
+    flag: { section: "general", message: "Client Email was filled in from supporting material — verify before sending." },
+  };
 }
 
 /**
@@ -97,7 +117,7 @@ export function composeInitialSnapshot(
   intake: ProposalIntake,
   generated: GeneratedSections,
   documentProvidesFields: boolean
-): { snapshot: ProposalSnapshot; additionalFlags: AIClarificationFlag[] } {
+): { snapshot: ProposalSnapshot; additionalFlags: AIClarificationFlag[]; clientEmailFromMaterial: string | null } {
   const additionalFlags: AIClarificationFlag[] = [];
 
   const clientName = resolveIdentityField(
@@ -128,20 +148,27 @@ export function composeInitialSnapshot(
   if (dateOfCall.flag) additionalFlags.push(dateOfCall.flag);
 
   const timeline = resolveCommercialField(
+    "Timeline",
     intake.proposedTimeline,
-    DEFAULT_TIMELINE,
+    isTimelineUnset,
     generated.fieldsFromMaterial.timeline,
     documentProvidesFields,
     (t) => formatTimeline(t.amount, t.unit)
   );
+  if (timeline.flag) additionalFlags.push(timeline.flag);
 
   const pricing = resolveCommercialField(
+    "Pricing",
     intake.estimatedPricing,
-    DEFAULT_PRICING,
+    isPricingUnset,
     generated.fieldsFromMaterial.pricing,
     documentProvidesFields,
     (p) => formatPricing(p.amount, p.currency)
   );
+  if (pricing.flag) additionalFlags.push(pricing.flag);
+
+  const clientEmail = resolveClientEmail(intake.clientEmail, generated.fieldsFromMaterial.clientEmail, documentProvidesFields);
+  if (clientEmail.flag) additionalFlags.push(clientEmail.flag);
 
   // Safety net: if the model wrote the literal placeholder for a narrative
   // section but didn't (for whatever reason) also raise a flag naming that
@@ -179,12 +206,13 @@ export function composeInitialSnapshot(
         projectScope: stripMarkdownFormatting(generated.projectScope),
         recommendedApproach: stripMarkdownFormatting(generated.recommendedApproach),
         deliverables: generated.deliverables.map(stripMarkdownFormatting),
-        timeline,
-        pricing,
+        timeline: timeline.value,
+        pricing: pricing.value,
         nextSteps: buildNextSteps(),
       },
     },
     additionalFlags,
+    clientEmailFromMaterial: clientEmail.value,
   };
 }
 

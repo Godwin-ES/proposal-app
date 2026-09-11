@@ -1,4 +1,5 @@
 import type { ProposalIntake, ProposalSnapshot, ProposalStatus } from "@/lib/domain/types";
+import { isTimelineUnset, isPricingUnset } from "@/lib/domain/quantity-fields";
 
 function isBlank(value: string | undefined | null): boolean {
   return !value || value.trim().length === 0;
@@ -8,13 +9,12 @@ function isBlank(value: string | undefined | null): boolean {
  * `documentProvidesFields` is the salesperson's pre-generation declaration
  * that supporting material already contains the answers to some of these
  * fields (see `document_provides_fields` on `proposals`). When set, every
- * field below may stay blank — generation is expected to draw it from
- * supporting material instead (see composeInitialSnapshot) — but at least
+ * field below — including Proposed Timeline/Estimated Pricing, whose "not
+ * yet specified" state is 0 rather than blank (see isTimelineUnset/
+ * isPricingUnset) — may stay unset, and generation is expected to draw it
+ * from supporting material instead (see composeInitialSnapshot). At least
  * one successfully-extracted material must actually exist, or there is
- * nothing for that promise to draw from. Proposed Timeline and Estimated
- * Pricing are never blank in practice (their inputs always display a
- * concrete default) — a document may only override that untouched default,
- * which this readiness check can't observe and doesn't need to.
+ * nothing for that promise to draw from.
  */
 export function evaluateGenerationReadiness(
   intake: ProposalIntake,
@@ -36,13 +36,13 @@ export function evaluateGenerationReadiness(
     if (isBlank(intake.projectScope)) blockers.push("Project Scope");
     if (isBlank(intake.goalsAndObjectives)) blockers.push("Goals and Objectives");
     if (isBlank(intake.recommendedServices)) blockers.push("Recommended Services / Deliverables");
+    if (isTimelineUnset(intake.proposedTimeline)) blockers.push("Proposed Timeline");
+    if (isPricingUnset(intake.estimatedPricing)) blockers.push("Estimated Pricing");
   }
 
   // Client Email is delivery routing metadata, not something generation
   // needs — it's enforced by evaluateDeliveryReadiness instead, right
   // before it actually matters.
-  if (isBlank(intake.proposedTimeline)) blockers.push("Proposed Timeline");
-  if (isBlank(intake.estimatedPricing)) blockers.push("Estimated Pricing");
   return blockers;
 }
 
@@ -53,12 +53,13 @@ export function evaluateApprovalReadiness(input: {
   const { snapshot, hasCurrentVersion } = input;
   const blockers: string[] = [];
 
-  // Date of Call, Recommended Services, Proposed Timeline, and Estimated
-  // Pricing are no longer checked here: they're required for generation
-  // itself (evaluateGenerationReadiness) and intake fields are frozen the
-  // moment a version exists (see update_pre_generation_intake in
-  // supabase/migrations/003_week3_business_rpcs.sql), so they can never be
-  // blank by the time a version exists to approve.
+  // Date of Call and Recommended Services are no longer checked here: intake
+  // fields are frozen the moment a version exists (see
+  // update_pre_generation_intake in supabase/migrations/003), so they can
+  // never be blank by the time a version exists to approve. Timeline/Pricing
+  // are checked below, but via the version's own content, not intake — a
+  // version can carry a placeholder ("[Timeline]") if generation couldn't
+  // resolve either one from supporting material, which is a real blocker.
 
   if (!hasCurrentVersion || !snapshot) {
     blockers.push("A generated proposal version");

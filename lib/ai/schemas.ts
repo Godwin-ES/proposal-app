@@ -17,6 +17,7 @@ import { isoDatePattern } from "@/lib/domain/schemas";
 export const fieldsFromMaterialSchema = z.object({
   clientName: z.string().trim().min(1).nullable(),
   companyName: z.string().trim().min(1).nullable(),
+  clientEmail: z.string().trim().email().nullable(),
   salespersonName: z.string().trim().min(1).nullable(),
   dateOfCall: z.string().regex(isoDatePattern).nullable(),
   timeline: z

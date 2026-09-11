@@ -19,7 +19,15 @@ const intake: ProposalIntake = {
   estimatedPricing: "$12,000",
 };
 
-const noFieldsFromMaterial = { clientName: null, companyName: null, salespersonName: null, dateOfCall: null, timeline: null, pricing: null };
+const noFieldsFromMaterial = {
+  clientName: null,
+  companyName: null,
+  clientEmail: null,
+  salespersonName: null,
+  dateOfCall: null,
+  timeline: null,
+  pricing: null,
+};
 
 const generated: GeneratedSections = {
   introduction: "AI intro",
@@ -95,16 +103,17 @@ describe("composeInitialSnapshot", () => {
     expect(additionalFlags).toHaveLength(0);
   });
 
-  it("fills timeline/pricing from material only when still at the untouched default and the checkbox is on", () => {
-    const untouchedIntake = { ...intake, proposedTimeline: "1 week", estimatedPricing: "USD 1" };
+  it("fills timeline/pricing from material only when still at the unset (0) default and the checkbox is on", () => {
+    const untouchedIntake = { ...intake, proposedTimeline: "0 weeks", estimatedPricing: "USD 0" };
     const withMaterial = {
       ...generated,
       fieldsFromMaterial: { ...noFieldsFromMaterial, timeline: { amount: 8, unit: "weeks" as const }, pricing: { amount: 18500, currency: "USD" as const } },
     };
 
-    const { snapshot: withoutCheckbox } = composeInitialSnapshot(untouchedIntake, withMaterial, false);
-    expect(withoutCheckbox.content.timeline).toBe("1 week");
-    expect(withoutCheckbox.content.pricing).toBe("USD 1");
+    const { snapshot: withoutCheckbox, additionalFlags } = composeInitialSnapshot(untouchedIntake, withMaterial, false);
+    expect(withoutCheckbox.content.timeline).toBe(placeholderContent("Timeline"));
+    expect(withoutCheckbox.content.pricing).toBe(placeholderContent("Pricing"));
+    expect(additionalFlags).toHaveLength(2);
 
     const { snapshot: withCheckbox } = composeInitialSnapshot(untouchedIntake, withMaterial, true);
     expect(withCheckbox.content.timeline).toBe("8 weeks");
@@ -143,6 +152,21 @@ describe("composeInitialSnapshot", () => {
     const { snapshot: rejectsFuture, additionalFlags } = composeInitialSnapshot(blankIntake, withFutureDate, true);
     expect(rejectsFuture.client.dateOfCall).toBe(placeholderContent("Date of Call"));
     expect(additionalFlags.some((f) => f.message.includes("Date of Call"))).toBe(true);
+  });
+
+  it("fills clientEmailFromMaterial only when intake email is blank, the checkbox is on, and material has a valid email", () => {
+    const blankIntake = { ...intake, clientEmail: "" };
+    const withMaterial = { ...generated, fieldsFromMaterial: { ...noFieldsFromMaterial, clientEmail: "found@client.test" } };
+
+    const { clientEmailFromMaterial: withoutCheckbox } = composeInitialSnapshot(blankIntake, withMaterial, false);
+    expect(withoutCheckbox).toBeNull();
+
+    const { clientEmailFromMaterial: withCheckbox, additionalFlags } = composeInitialSnapshot(blankIntake, withMaterial, true);
+    expect(withCheckbox).toBe("found@client.test");
+    expect(additionalFlags.some((f) => f.message.includes("Client Email"))).toBe(true);
+
+    const { clientEmailFromMaterial: alreadySet } = composeInitialSnapshot(intake, withMaterial, true);
+    expect(alreadySet).toBeNull();
   });
 
   it("adds a safety-net flag when the model wrote a section placeholder without flagging it", () => {

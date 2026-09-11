@@ -36,7 +36,16 @@ export function parseTimeline(value: string): { amount: number; unit: TimelineUn
     const unit = TIMELINE_UNIT_ALIASES[match[2].toLowerCase()];
     if (unit && Number.isFinite(amount)) return { amount, unit };
   }
-  return { amount: 1, unit: "weeks" };
+  return { amount: 0, unit: "weeks" };
+}
+
+/** A genuinely zero amount ("0 weeks", "0 days" in any unit) is this field's
+ * "not yet specified" state, distinct from a deliberate `TIMELINE_SAME_DAY`/
+ * `PRICING_NO_COST` choice (those are real business facts, not placeholders)
+ * — used wherever the app needs to tell "nobody has set this yet" apart from
+ * "the salesperson entered a value." */
+export function isTimelineUnset(value: string): boolean {
+  return value.trim() !== TIMELINE_SAME_DAY && parseTimeline(value).amount === 0;
 }
 
 export const CURRENCY_CODES = ["USD", "EUR", "GBP", "CAD", "AUD"] as const;
@@ -63,4 +72,9 @@ export function parsePricing(value: string): { amount: number; currency: Currenc
   // lets the field still parse sensibly if it's ever reopened for editing.
   const numeric = Number(trimmed.replace(/[^0-9.]/g, ""));
   return { amount: Number.isFinite(numeric) ? numeric : 0, currency: "USD" };
+}
+
+/** Same "not yet specified" concept as `isTimelineUnset`, for Pricing. */
+export function isPricingUnset(value: string): boolean {
+  return value.trim() !== PRICING_NO_COST && parsePricing(value).amount === 0;
 }

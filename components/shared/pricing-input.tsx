@@ -51,7 +51,7 @@ export function PricingInput({
         </Select>
         <NumberStepper
           value={amount}
-          min={1}
+          min={0}
           step={100}
           disabled={disabled || isNoCost}
           onChange={(next) => update(next, currency)}
