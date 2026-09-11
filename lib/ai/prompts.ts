@@ -31,6 +31,8 @@ Add a \`clarificationFlags\` entry, each with the section it concerns (or "gener
 3. An intake field or an entire supporting-material file being clearly irrelevant or nonsensical — not a typo, not terse, but genuinely unrelated to a business proposal (e.g. random/gibberish text, or content about something else entirely).
 Never flag a detail merely because it appears only in supporting material and not in the intake fields (that is supporting material's normal role), and never flag ordinary brevity or minor wording issues.
 
+Write every \`clarificationFlags\` message as a plain, salesperson-facing sentence about what happened and what to check — never mention schema/field names, code, or internal terms like "fieldsFromMaterial", "intake", or "clarificationFlag" itself. Say what was filled in or what's uncertain and why, not how the system produced it (e.g. "The date of the call wasn't given a year in the supporting document, so 2026 was assumed — please confirm." rather than "...and filled into fieldsFromMaterial.dateOfCall").
+
 For any supporting-material fact you use, add an entry to \`supportingMaterialUsage\` naming the material id, the section(s) it informed, and the fact used.
 
 Respond only by calling the provided structured output schema.`;
@@ -42,7 +44,7 @@ const FIELDS_FROM_MATERIAL_RULE = `
 - clientName / companyName: a single confident name each, or \`null\`.
 - clientEmail: only a literal, complete email address stated in supporting material, or \`null\` — never construct or guess one from a name/company.
 - salespersonName: only if supporting material names a specific Koya salesperson for this engagement, or \`null\` — this is rarely stated in a client discovery document, so \`null\` will usually be correct.
-- dateOfCall: exact \`YYYY-MM-DD\`, or \`null\`. You are told today's date below — if supporting material gives a specific day and month but no year, assume the most recent occurrence of that day/month that is not in the future (usually the current year), fill it in, and add a clarificationFlag noting the year was inferred rather than stated. Never a future date.
+- dateOfCall: exact \`YYYY-MM-DD\`, or \`null\`. You are told today's date below — if supporting material gives a specific day and month but no year, assume the most recent occurrence of that day/month that is not in the future (usually the current year), fill it in, and add a clarificationFlag (in plain language, per the rule above) noting that the year wasn't stated and had to be assumed. Never a future date.
 - timeline: \`{ amount, unit }\` (unit one of days/weeks/months) only if supporting material states a clear duration for this engagement, or \`null\`.
 - pricing: \`{ amount, currency }\` only if supporting material states a clear price for this engagement, or \`null\`.
 If nothing in this proposal's discovery fields is actually unspecified, every key here should be \`null\` — this object still must always be present.`;
