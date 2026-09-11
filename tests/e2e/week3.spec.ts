@@ -66,20 +66,23 @@ test("full proposal lifecycle: intake -> generation -> regeneration -> approval 
     await salesPage.fill("#companyName", completeIntake.companyName);
     await salesPage.fill("#dateOfCall", completeIntake.dateOfCall);
     await salesPage.fill("#salespersonName", completeIntake.salespersonName);
+    // Use Resend's guaranteed-success sandbox address so the delivery step
+    // later in this test has a deterministic outcome.
+    await salesPage.fill("#clientEmail", "delivered@resend.dev");
     await salesPage.fill("#clientNeedsSummary", completeIntake.clientNeedsSummary);
     await salesPage.fill("#goalsAndObjectives", completeIntake.goalsAndObjectives);
     await salesPage.fill("#projectScope", completeIntake.projectScope);
     await salesPage.fill("#recommendedServices", completeIntake.recommendedServices);
-    await salesPage.fill("#proposedTimeline", completeIntake.proposedTimeline);
-    await salesPage.fill("#estimatedPricing", completeIntake.estimatedPricing);
+
+    // Timeline/Pricing are composite NumberStepper + Select controls; the
+    // default unit (Weeks) and currency (USD) are already what we want, so
+    // only the amount inputs need filling.
+    const commercialCard = salesPage.locator('[data-slot="card"]', { hasText: "Commercial Details" });
+    await commercialCard.locator('input[type="number"]').first().fill("8");
+    await commercialCard.locator('input[type="number"]').nth(1).fill("18500");
+
     await salesPage.click("text=Save Intake");
     await expect(salesPage.locator("text=Intake saved.")).toBeVisible({ timeout: 10_000 });
-
-    // Use Resend's guaranteed-success sandbox address so the delivery step
-    // later in this test has a deterministic outcome.
-    await salesPage.fill("#clientEmail", "delivered@resend.dev");
-    await salesPage.click("text=Save Email");
-    await expect(salesPage.locator("text=Client email saved.")).toBeVisible({ timeout: 10_000 });
   });
 
   await test.step("Salesperson generates the initial draft with Claude Haiku 4.5", async () => {
