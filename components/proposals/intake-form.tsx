@@ -213,9 +213,10 @@ export function IntakeForm({
               </span>
             </Label>
             <p className="text-xs text-muted-foreground">
-              Blank fields left this way are filled from supporting material where possible when you generate; the AI
-              flags anything it can&apos;t confidently fill in, rather than guessing. Salesperson Name, Date of Call,
-              Timeline, and Pricing are unaffected by this option.
+              Blank fields left this way — and Timeline/Pricing if left at their default — are filled from supporting
+              material where possible when you generate; the AI flags anything it can&apos;t confidently fill in,
+              rather than guessing, and never overwrites a value you actually entered yourself. Salesperson Name and
+              Date of Call are always unaffected by this option.
             </p>
           </CardContent>
         </Card>
