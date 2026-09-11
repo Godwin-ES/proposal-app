@@ -23,6 +23,22 @@ export function ApprovalDecisionPanel({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
+  /** The salesperson can withdraw or resubmit a new version while this page
+   * is still open in the approver's browser — the decide RPC then correctly
+   * rejects with INVALID_STATE (no longer pending) or STALE_VERSION (a newer
+   * version exists). Rather than surface that as a raw error, treat it as
+   * "this proposal moved on without you" and send them back to a fresh
+   * queue instead of leaving them stuck on a page they can no longer act on. */
+  function handleDecisionError(error: { code: string; message: string }): void {
+    if (error.code === "INVALID_STATE" || error.code === "STALE_VERSION") {
+      toast.info("This proposal was withdrawn or updated by the salesperson since you opened it. Returning to your queue.");
+      router.push("/approvals");
+      router.refresh();
+      return;
+    }
+    toast.error(error.message);
+  }
+
   function requestChanges() {
     startTransition(async () => {
       const result = await decideApprovalAction(proposalId, versionId, "changes_requested", comments);
@@ -30,7 +46,7 @@ export function ApprovalDecisionPanel({
         toast.success("Changes requested.");
         router.push("/approvals");
       } else {
-        toast.error(result.error.message);
+        handleDecisionError(result.error);
       }
     });
   }
@@ -42,7 +58,7 @@ export function ApprovalDecisionPanel({
       router.push("/approvals");
       return true;
     }
-    toast.error(result.error.message);
+    handleDecisionError(result.error);
     return false;
   }
 

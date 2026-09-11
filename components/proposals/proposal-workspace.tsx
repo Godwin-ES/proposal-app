@@ -133,7 +133,7 @@ export function ProposalWorkspace({
     const result = await submitForApprovalAction(proposalId, versionId);
     if (result.ok) {
       toast.success("Submitted for approval.");
-      router.refresh();
+      router.push("/dashboard");
       return true;
     }
     toast.error(result.error.message);
