@@ -72,3 +72,7 @@ pnpm test        # unit + integration (vitest)
 pnpm test:e2e    # full login-to-delivery flow (playwright)
 pnpm check       # lint + typecheck + unit/integration tests
 ```
+
+### Manual workflow test pack
+
+For a structured end-to-end review of the application workflow, use [`proposal_test_pack/Koya_Proposal_Studio_Test_Pack.md`](proposal_test_pack/Koya_Proposal_Studio_Test_Pack.md). The pack provides prepared scenarios, supporting documents, and expected outcomes for exercising the core proposal flow as well as important edge cases across intake, AI generation, supporting-material handling, approval, and delivery.
